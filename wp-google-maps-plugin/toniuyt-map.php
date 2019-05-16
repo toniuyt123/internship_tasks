@@ -21,12 +21,38 @@ function add_map(){
         'ajaxurl' => admin_url('admin-ajax.php')
     ));
 
-    echo "<div id=\"map\"></div>
+    echo "<div id=\"map-container\" style=\"width:100%;height:500px;\">
+		<div id=\"map\" style=\"width:80%;height:100%;float:left;\"></div>
+        	<div id=\"map-filters\" style=\"width:20%;float:left;height:100%;overflow-y:scroll;\"></div>
+	</div>
     <script async defer src=\"https://maps.googleapis.com/maps/api/js?key=API_KEY&callback=initMap\"> </script>";
 }
 
-add_action('wp_ajax_get_markers_xml', 'get_markers_xml');
-function get_markers_xml() {
+add_action('wp_ajax_marker_filters', 'marker_filters');
+add_action('wp_ajax_nopriv_post_marker_filters', 'marker_filters');
+function marker_filters()
+{
+    require("js/dbinfo.php");
+    $connection = mysqli_connect('localhost', $username, $password);
+    $db_selected = mysqli_select_db($connection, $database);
+
+    $query = "SELECT type FROM markers GROUP BY type;";
+    $result = mysqli_query($connection, $query);
+    if (!$result) {
+        die('Invalid query: ' . mysqli_error($connection));
+    }
+
+    while ($row = @mysqli_fetch_assoc($result)) {
+        echo $row['type'];
+        echo ',';
+    }
+    wp_die();
+}
+
+add_action('wp_ajax_marker_xml', 'marker_xml');
+add_action('wp_ajax_nopriv_post_marker_xml', 'marker_xml');
+function marker_xml()
+{
     require("dbinfo.php");
 
     $dom = new DOMDocument("1.0");
