@@ -1,0 +1,114 @@
+#map-filters-fs {
+    position: absolute;
+    top: 10%;
+    left: 15px;
+    width: 20%;
+    height: 45%;
+    background: #ffffff;
+    border-radius: 20px;
+    opacity: 0.95;
+    padding-left: 20px;
+    padding-top: 10px;
+    -webkit-box-shadow: 0px 0px 15px 0px rgba(0,0,0,0.75);
+    -moz-box-shadow: 0px 0px 15px 0px rgba(0,0,0,0.75);
+    box-shadow: 0px 0px 15px 0px rgba(0,0,0,0.75);
+}
+
+#filter-input, #apply-button {
+    margin-bottom: 10px;
+    border-radius: 5px;
+    border-width: 2px;
+    padding: 5px;
+    font-size: 0.9em;
+    height: 10%;
+}
+
+#filter-input {
+    width: 70%;
+}
+
+#input_container {
+    position:relative;
+    display:inline-block;
+    width:100%;
+}
+
+#filter-area {
+    position: absolute;
+    right: 15px;
+    bottom: 30px;
+    height: 10%;
+    padding: 5px;
+    font-size: 0.8em;
+    border-radius: 1px;
+}
+
+#apply-button {
+    width:20%;
+    margin-left: 5px;
+}
+
+#map-fs {
+    width: 100%;
+    height: 100%;
+}
+
+#filters-list {
+    max-height: 45%;
+    overflow-y:scroll;
+    margin-bottom:15px;
+}
+
+#marker-counter {
+    color: gray;
+    position: absolute;
+    right:15px;
+    bottom:0;
+}
+
+.applied-filter {
+    background: lightgray;
+    float: left;
+    margin-right: 5px;
+    margin-bottom:5px;
+    padding: 0px 5px 0 5px;
+    border-radius: 3px;
+    border: 1px solid gray; 
+    font-size: 0.8em;
+}
+
+.close-filter {
+    font-family: fantasy;
+}
+
+.close-filter:hover {
+    color:darkred;
+    cursor: pointer;
+}
+
+  .autocomplete-items {
+    position: absolute;
+    border: 1px solid #d4d4d4;
+    border-bottom: none;
+    border-top: none;
+    z-index: 99;
+    /*position the autocomplete items to be the same width as the container:*/
+    top: 100%;
+    left: 0;
+    right: 0;
+  }
+  .autocomplete-items div {
+    padding: 10px;
+    cursor: pointer;
+    background-color: #fff;
+    border-bottom: 1px solid #d4d4d4;
+  }
+  .autocomplete-items div:hover {
+    /*when hovering an item:*/
+    background-color: #e9e9e9;
+  }
+  .autocomplete-active {
+    /*when navigating through the items using the arrow keys:*/
+    background-color: DodgerBlue !important;
+    color: #ffffff;
+  }
