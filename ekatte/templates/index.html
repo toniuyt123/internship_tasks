@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Ekatte Search</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/handle_results.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+</head>
+
+<body>
+    <h1>Ekatte Search</h1>
+    <div class="input-group">
+        <input class=" form-control" type="text" id="query" placeholder="Type here...">
+        <span class="input-group-btn">
+            <button class=" btn btn-primary" id="search">Search</button>
+        </span>
+    </div>
+    <p>Received <span id="count">0</span> Results</p>
+    <table id="container"></table>
+</body>
+
+</html>

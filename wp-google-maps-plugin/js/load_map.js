@@ -59,6 +59,7 @@ jQuery(document).ready(function (e) {
                 var type_text = document.createElement('text');
                 type_text.textContent = type;
                 infowincontent.appendChild(type_text);
+
                 var marker = new google.maps.Marker({
                     map: map,
                     position: point
@@ -109,11 +110,21 @@ jQuery(document).ready(function (e) {
             container.appendChild(applied_filters);
 
 
+            var latLngFields = [];
             var filter_area_button = document.createElement("button");
+            for(var i = 0; i < 4;i++) {
+                latLngFields[i] = document.createElement("input");
+                latLngFields[i].type = "text";
+                container.appendChild(latLngFields[i]);
+            }
             filter_area_button.id = "filter-area";
-            filter_area_button.textContent = "Filter only visible area"
+            filter_area_button.textContent = "Filter area"
             filter_area_button.onclick = function () {
-                filter_area(map.getBounds());
+                console.log(Number(latLngFields[0].value));
+                filter_area(new google.maps.LatLngBounds(
+                    new google.maps.LatLng(Number(latLngFields[0].value), Number(latLngFields[1].value)),
+                    new google.maps.LatLng(Number(latLngFields[2].value), Number(latLngFields[3].value)),
+                ));
             }
             container.appendChild(filter_area_button);
 
