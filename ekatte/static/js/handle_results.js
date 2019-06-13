@@ -11,32 +11,33 @@ $(document).ready(function() {
                 while(container.firstChild) {
                     container.removeChild(container.firstChild);
                 }
-                
                 document.getElementById("count").textContent = response.length;
+                keys = Object.keys(response[0]);
 
-                key_header = document.createElement('tr');
-                for(var i = 0;i < Object.keys(response[0]).length;i++) {
+                key_header = document.createElement('thead');
+                key_header.appendChild(document.createElement("tr"));
+                for(var i = 0;i < keys.length;i++) {
                     elem = document.createElement('th');
-                    key = Object.keys(response[0])[i];
+                    key = keys[i];
                     elem.textContent = key;
-                    elem.classList.add("entry-info");
-                    key_header.appendChild(elem);
+                    key_header.firstChild.appendChild(elem);
                 }
                 container.appendChild(key_header);
 
+                tbody = document.createElement('tbody');
+                container.appendChild(tbody);
                 for(var i = 0;i < response.length;i++) {
                     entry = response[i];
                     entry_container = document.createElement('tr');
                     entry_container.classList.add("entry-container");
-                    for(var j = 0;j < Object.keys(entry).length;j++) {
+                    for(var j = 0;j < keys.length;j++) {
                         elem = document.createElement('td');
-                        key = Object.keys(entry)[j];
+                        key = keys[j];
                         elem.textContent = entry[key];
-                        elem.classList.add(key);
-                        elem.classList.add('entry-info');
+                        elem.classList.add(key.replace(" ", "-"));
                         entry_container.appendChild(elem);
                     }
-                    container.appendChild(entry_container);
+                    tbody.appendChild(entry_container);
                 }
             },
             error: function(err) {

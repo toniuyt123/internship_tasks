@@ -24,9 +24,9 @@ def search():
         cur.execute(""" SELECT v.ekatte, v.t_v_m, v.name, m.name, m.code, r.name, r.code FROM Villages v
                         LEFT JOIN Minicapilities m ON m.id = v.minicapilityId
                         LEFT JOIN Regions r ON r.id = m.regionId 
-                        WHERE v.name LIKE %s;""", ('%'+query+'%',))
+                        WHERE v.name %% %s;""", (query,))
         columns = (
-            'ekatte', 't_v_m', 'name', 'm_name', 'm_code', 'r_name', 'r_code'
+            'ekatte', 't_v_m', 'name', 'minicapility', 'minicapility code', 'region', 'region code'
         )
         for row in cur:
             data.append(dict(zip(columns, row)))

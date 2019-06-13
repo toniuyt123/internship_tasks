@@ -3,7 +3,7 @@ import csv
 import sys
 from config import config
 
-def fill_table(ekatte_dir, table_name):
+def fill_table(ekatte_dir):
     conn = None
     try:
         params = config()
@@ -40,8 +40,8 @@ def fill_table(ekatte_dir, table_name):
                                 id = cur.fetchone()[0]
                                 
                                 cur.execute("""INSERT INTO Villages(ekatte, t_v_m, name, minicapilityId) VALUES(%s, %s, %s, %s)
-                                    ON CONFLICT ON CONSTRAINT villages_name_minicapilityId_key
-                                    DO NOTHING;""", (row['ekatte'], row['t_v_m'], row['name'], id))
+                                                ON CONFLICT ON CONSTRAINT villages_ekatte_key
+                                                DO NOTHING;""", (row['ekatte'], row['t_v_m'], row['name'], id))
 
 
         cur.close()
@@ -54,4 +54,4 @@ def fill_table(ekatte_dir, table_name):
 
 
 if __name__ == '__main__':
-    fill_table(sys.argv[1], sys.argv[2])
+    fill_table(sys.argv[1])

@@ -28,8 +28,7 @@ def create_tables():
                 t_v_m t_v_m NOT NULL,
                 name VARCHAR(60) NOT NULL,
                 minicapilityId INTEGER NOT NULL,
-                FOREIGN KEY (minicapilityId) REFERENCES Minicapilities(id),
-                UNIQUE(name, minicapilityId)
+                FOREIGN KEY (minicapilityId) REFERENCES Minicapilities(id)
         )
         """)
     conn = None

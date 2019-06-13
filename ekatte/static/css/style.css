@@ -10,22 +10,6 @@ body {
     margin:5px;
 }
 
-table {
-    border-collapse: collapse;
-}
-
-table, th, td {
-    border: 1px solid black;
-}
-
-th, td {
-    padding: 5px;
-}
-
-.entry-info {
-    padding: 5px; 
-}
-
 .name {
     font-weight: bold;
     font-size: 1.2em; 
