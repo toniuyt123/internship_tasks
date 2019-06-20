@@ -35,7 +35,12 @@ def biggest_goat(free_space, goats, sent_goats):
     return -1
 
 if __name__ == '__main__':
-    N, K = map(int, input().split())
-    arr = list(map(int, input().split()))
-    raft_capacity = goat(N, K, arr)
-    print(raft_capacity)
+    try:
+        N, K = map(int, input().split())
+        arr = list(map(int, input().split()))
+        if N < 1 or N > 1000 or K < 1 or K > 1000 or max(arr) > 100000 or min(arr) < 1:
+            raise ValueError('arguments out of bounds (1 ≤ N ≤ 1000, 1 ≤ K ≤ 1000, 1 ≤ Ai ≤ 100000)') 
+        raft_capacity = goat(N, K, arr)
+        print(raft_capacity)
+    except ValueError as e:
+        print(e)
