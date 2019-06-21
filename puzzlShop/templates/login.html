@@ -13,15 +13,14 @@
 {% block content %}
 <div class="card bg-light">
 	<article class="card-body mx-auto" style="max-width: 400px;">
-		<h4 class="card-title mt-3 text-center">Create Account</h4>
+		<h4 class="card-title mt-3 text-center">Log In</h4>
 		<form method='post'>
 			{{ form.hidden_tag() }}
 			{{ wtf.form_field(form.username) }}
-			{{ wtf.form_field(form.email) }}
-			{{ wtf.form_field(form.password) }}
-			{{ wtf.form_field(form.confirm) }}
-			<button class="btn btn-lg btn-primary btn-block" type="submit" method="POST">Sign Up</button>
-			<p class="text-center">Have an account? <a href="/login">Log In</a> </p>
+            {{ wtf.form_field(form.password) }}
+            {{ wtf.form_field(form.remember) }}
+			<button class="btn btn-lg btn-primary btn-block" type="submit" method="POST">Log in</button>
+			<p class="text-center">Don't have an account? <a href="/register">Register here</a> </p>
 		</form>
 	</article>
 </div> <!-- card.// -->

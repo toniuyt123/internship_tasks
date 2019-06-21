@@ -1,15 +1,18 @@
-from configparser import ConfigParser
+import os
 
-def config(filename='database.ini', section='postgresql'):
-    parser = ConfigParser()
-    parser.read(filename)
+def get_env_variable(name):
+    try:
+        return os.environ[name]
+    except KeyError:
+        message = "Expected environment variable '{}' not set.".format(name)
+        raise Exception(message)
 
-    db = {}
-    if parser.has_section(section):
-        params = parser.items(section)
-        for param in params:
-            db[param[0]] = param[1]
-    else:
-        raise Exception('Section {0} not found in the {1} file'.format(section, filename))
-
-    return db
+class BaseConfig(object):
+    # the values of those depend on your setup
+    POSTGRES_URL = get_env_variable("POSTGRES_URL")
+    POSTGRES_USER = get_env_variable("POSTGRES_USER")
+    POSTGRES_PW = get_env_variable("POSTGRES_PW")
+    POSTGRES_DB = get_env_variable("POSTGRES_DB")
+    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://{user}:{pw}@{url}/{db}'.format(user=POSTGRES_USER,pw=POSTGRES_PW,url=POSTGRES_URL,db=POSTGRES_DB)
+    SECRET_KEY = 'tovaemnogotaenoneshto'
+    SECRET_PASSWORD_SALT = 'tainatasolnaparolata'
