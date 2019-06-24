@@ -16,3 +16,11 @@ class BaseConfig(object):
     SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://{user}:{pw}@{url}/{db}'.format(user=POSTGRES_USER,pw=POSTGRES_PW,url=POSTGRES_URL,db=POSTGRES_DB)
     SECRET_KEY = 'tovaemnogotaenoneshto'
     SECRET_PASSWORD_SALT = 'tainatasolnaparolata'
+    SECURITY_PASSWORD_SALT = 'tainasolzasigurnost'
+    MAIL_SERVER = 'smtp.googlemail.com'
+    MAIL_PORT = 465
+    MAIL_USE_TLS = False
+    MAIL_USE_SSL = True
+    MAIL_USERNAME = os.environ['APP_MAIL_USERNAME']
+    MAIL_PASSWORD = os.environ['APP_MAIL_PASSWORD']
+    MAIL_DEFAULT_SENDER = 'antoniomilev123@gmail.com'

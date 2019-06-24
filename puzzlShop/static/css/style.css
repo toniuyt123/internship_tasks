@@ -1,0 +1,40 @@
+
+body {
+    padding: 10px;
+}
+
+.product-name {
+    float:left;
+    font-size: 2.5em;
+}
+
+.price {
+    bottom: 0;
+    margin-right: 15px;
+    font-size: 2em;
+}
+
+.product-image {
+    width: 100%;
+    height: auto;
+}
+
+.star-ratings-sprite {
+    background: url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/2605/star-rating-sprite.png") repeat-x;
+    font-size: 0;
+    height: 21px;
+    line-height: 0;
+    overflow: hidden;
+    text-indent: -999em;
+    width: 110px;
+    margin: 0 auto;
+    float:left;
+}
+
+.star-ratings-sprite-rating {
+    background: url("https://s3-us-west-2.amazonaws.com/s.cdpn.io/2605/star-rating-sprite.png") repeat-x;
+    background-position: 0 100%;
+    float: left;
+    height: 21px;
+    display:block;
+}

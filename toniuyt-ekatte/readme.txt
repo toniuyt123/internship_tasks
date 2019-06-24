@@ -1,0 +1,1 @@
+Graphical interface for searching data about Bulgarian villages using the EKATTE dataset.
