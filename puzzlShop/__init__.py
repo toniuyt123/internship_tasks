@@ -1,10 +1,10 @@
 import os
 import os.path as op
-from flask import Flask, url_for
+from flask import Flask, url_for, redirect
 from flask_mail import Mail
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin
+from flask_login import LoginManager, UserMixin, current_user
 from flask_admin import Admin, form
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib import sqla
@@ -28,8 +28,12 @@ class User(db.Model, UserMixin):
     def __repr__(self):
         return self.DISTRICT
 
+    def is_admin(self):
+        return self.is_admin
+
 class Product(db.Model):
     __table__ = db.Model.metadata.tables['products']
+
 
 @login_manager.user_loader
 def get_user(id):
@@ -37,6 +41,11 @@ def get_user(id):
 
 file_path = op.join(op.dirname(__file__), 'static/img')
 class ImageView(sqla.ModelView):
+    def is_accessible(self):
+        return current_user.is_amdin()
+
+    def inaccessible_callback(self):
+        return redirect(url_for('/login'))
 
     form_overrides = {
         'imagepath': form.ImageUploadField

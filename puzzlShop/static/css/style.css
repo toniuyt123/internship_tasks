@@ -38,3 +38,32 @@ body {
     height: 21px;
     display:block;
 }
+
+.navbar-nav {
+    font-size: 2em;
+}
+
+.nav-item {
+    padding-right: 20px;
+}
+
+#filter-button {
+    float: right;
+    width: 30%;
+    margin: 15px;
+}
+.tag-filters {
+    font-size: 1.4em;
+}
+.tag-filters label {
+    font-weight: normal !important;
+}
+.heading-text {
+    font-size: 2em;
+    background-color: #5bc0de;
+    padding: 5px;
+    font-family: 'Nova Flat';
+}
+.nav-link {
+    font-family: 'Nova Flat';
+}

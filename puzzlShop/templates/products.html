@@ -1,64 +1,39 @@
-{% extends "bootstrap/base.html" %}
-{% block title %}Puzzles{% endblock %}
+{% extends 'base.html' %}
 
 {% block styles %}
 {{super()}}
-<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
-<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-<script src="{{url_for('static', filename='js/sort.js')}}"></script>
-<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.8/css/all.css">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css')}}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-{% endblock %}
-
-{% block navbar %}
-<nav class="navbar navbar-expand-lg navbar-dark bg-info">
-    <a class="navbar-brand" href="#">Puzzls</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
-        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav mr-auto">
-            <li class="nav-item active">
-                <a class="nav-link" href="/products">Products <span class="sr-only">(current)</span></a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">Deals</a>
-            </li>
-        </ul>
-        <form class="form-inline my-2 my-lg-0">
-            <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-            <button class="btn btn-outline-light my-2 my-sm-0" type="submit">Search</button>
-        </form>
-    </div>
-</nav>
+<script scr="{{ url_for('static', filename='js/sort.js') }}"></script>
 {% endblock %}
 
 {% block content %}
 <div class="cotnainer">
     <div class="row border border-successs">
         <div class="col-lg-2 tags-container">
-
+            <p class='heading-text'>FILTERS</p>
+            <form method="POST" action="/products">
+                {% for tag in tags %}
+                <div class="tag-filters">
+                    <label for="tag-{{tag.name}}"> <input type="checkbox" id="tag-{{tag.name}}" value="{{tag.name}}"
+                            name="tags">
+                        {{tag.name}}</label>
+                </div>
+                {% endfor %}
+                <button type="submit" id="filter-button" class="btn btn-info btn-lg">Filter</button>
+            </form>
         </div>
         <div class="col-lg-10">
             <div class="row" style="height: 10%;">
                 <div class="col-lg-3">
-                    <div class="dropdown show">
-                        <a class="btn btn-secondary dropdown-toggle" role="button" id="sortByDropdown"
-                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Sort by
-                        </a>
-
-                        <div class="dropdown-menu" aria-labelledby="sortByDropdown">
-                            <a class="dropdown-item" href="javascript:;" onclick='sort({{ products }})'>Price ascending</a>
-                            <a class="dropdown-item" href="#">Price descending</a>
-                            <a class="dropdown-item" href="#">Rating ascending</a>
-                            <a class="dropdown-item" href="#">Rating descending</a>
-                        </div>
-                    </div>
+                    <form method='POST' action='/products'>
+                        <select name='sort_by' class="form-control form-control-lg" onchange='this.form.submit()'>
+                            <option value="" selected disabled hidden>Sort by</option>
+                            <option value="{'param':'price','desc':'False'}">Price acending</option>
+                            <option value="{'param':'price','desc':'True'}">Price descending</option>
+                            <option value="{'param':'rating','desc':'False'}">Rating acending</option>
+                            <option value="{'param':'rating','desc':'True'}">Rating descending</option>
+                        </select>
+                    </form>
                 </div>
             </div>
             {% for product in products: %}
@@ -70,7 +45,7 @@
                 <div class="col-lg-10">
                     <div class="row">
                         <div class="col-lg-10 float-left">
-                            <h3 class="product-name">{{ product.name }}</h3>
+                            <h3 class="product-name">{{ product.name}}</h3>
                         </div>
                         <div class="col-lg-2">
                             <p class="price text-info"> {{ product.price }}$</p>

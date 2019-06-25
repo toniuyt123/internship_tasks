@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, Blueprint, jsonify
+from flask import Flask, render_template, redirect, url_for, request, flash, Blueprint
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, ValidationError
 from wtforms.validators import InputRequired, Email, Length, EqualTo
@@ -8,6 +8,9 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
 from puzzlShop import app, bootstrap, db, login_manager, User, Product
+from operator import itemgetter
+import simplejson as json
+import ast
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired(), Length(min=4, max=60)])
@@ -22,6 +25,7 @@ class RegisterForm(FlaskForm):
         InputRequired(), Length(min=8, max=80),
         EqualTo('confirm', message='Passwords must match')])
     confirm = PasswordField('Confirm Password')
+
 
 @app.route('/')
 @app.route('/index')
@@ -73,24 +77,69 @@ def confirm_email(token):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user:
-            if check_password_hash(user.passwordhash, form.password.data):
-                login_user(user, remember=form.remember.data)
-                return redirect('/')
+    if current_user.is_authenticated:
+        return redirect('/')
+    else: 
+        form = LoginForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(username=form.username.data).first()
+            if user:
+                if check_password_hash(user.passwordhash, form.password.data):
+                    login_user(user, remember=form.remember.data)
+                    return redirect('/')
 
-        return '<h1>Invalid username or password</h1>'
+            return '<h1>Invalid username or password</h1>'
 
-    return render_template('login.html', form=form)
+        return render_template('login.html', form=form)
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    user = current_user
+    user.authenticated = False
+    db.session.add(user)
+    db.session.commit()
+    logout_user()
+    return redirect('/')
 
 @app.route('/products', methods=['GET', 'POST'])
 def get_products():
-    products = Product.query.filter_by().all()
+    products = []
+    keys =[]
+    if request.method == 'POST':
+        keys = list(request.form.keys())
+        statement = ''
+        result = []
+        print(keys)
+        if 'search_query' in keys:
+            query = request.form['search_query']
+            statement = ('''SELECT * FROM products 
+                            WHERE to_tsvector(name) @@ to_tsquery(\'%s\') OR
+                                to_tsvector(description) @@ to_tsquery(\'%s\')''' % (query, query))
+            result = db.engine.execute(statement)
+        if 'tags' in keys:
+            tags = request.form.getlist('tags')
+            print(tags)
+            #for tag in tags:
+            statement = ('''SELECT p.*, array_agg(t.name) AS tags FROM products p
+                            LEFT JOIN productstags pt ON pt.productid = p.id
+                            LEFT JOIN tags t ON pt.tagid = t.id
+                            GROUP BY p.id, p.name, p.description, p.price, p.difficulty, p.rating, p.quantity
+                            HAVING \'%s\' = ANY(array_agg(t.name)); 
+            ''' % (tags[0]))
+            result = db.engine.execute(statement)
+        products = [dict(row.items()) for row in result]
+    if products == []:
+        products = Product.query.all()
 
-
-    return render_template('products.html', products=products)
+    if 'sort_by' in keys:
+        params = json.loads(request.form.get('sort_by').replace("'", "\""))
+        desc = True if params['desc'] == 'True' else False
+        products.sort(key=lambda x: getattr(x, params['param']), reverse=desc)
+        print(products)
+    
+    tags = db.engine.execute('SELECT * FROM tags')
+    
+    return render_template('/products.html', products=products, tags=tags)
 
 if __name__=='__main__':
     app.run()
