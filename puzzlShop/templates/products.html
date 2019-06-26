@@ -57,7 +57,11 @@
                                     class="star-ratings-sprite-rating"></span></div>
                         </div>
                         <div class="col-lg-2">
-                            <button type="button" class="btn btn-secondary btn-lg">Add to cart</button>
+                            <form action="/cart/add" method='POST'>
+                                <input type="hidden" value='{{product.id}}' name='product'>
+                                <button name='product' type="submit"
+                                    class="btn btn-secondary btn-lg">Add to cart</button>
+                            </form>
                         </div>
                     </div>
                     <div class="row">

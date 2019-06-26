@@ -1,16 +1,11 @@
-import matplotlib.pyplot as plt
-from matplotlib import colors as mcolors
+from bokeh.io import show, output_file
+from bokeh.plotting import figure
+from bokeh.models import GraphRenderer, StaticLayoutProvider, Oval, MultiLine
+from bokeh.palettes import Spectral9
+
 import math
 
 def find_route(circles):
-    fig, ax = plt.subplots()
-    for circle in circles:
-        circle = plt.Circle((circle[0], circle[1]), circle[2])
-        circle.set_facecolor('w')
-        circle.set_edgecolor('c')
-        ax.add_artist(circle)
-    ax.margins(4, 4)
-
     graph = {'%s'%i: [] for i in range(len(circles))}
     for i in range(len(circles) - 1):
         for j in range(i + 1, len(circles)):
@@ -25,8 +20,10 @@ def find_route(circles):
     if path == []:
         print(-1)
     else:
-        print(min(map(len, path)) - 1)
-    plt.show()
+        min_path = min(path, key=len)
+        print(len(min_path) - 1)
+
+        visualize(graph, min_path)
 
 def have_edge(x1, y1, x2, y2, r1, r2):
     dist = math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
@@ -35,19 +32,47 @@ def have_edge(x1, y1, x2, y2, r1, r2):
 def find_path(graph, star_vertex, end_vertex, path=[]):
     path = path + [star_vertex]
     if(star_vertex == end_vertex):
-        #print('found')
-        #print(path)
         return [path]
     paths=[]
     for vertex in graph['%s'%star_vertex]:
         if vertex not in path:
-            #print("entering new")
-            #print(path)
             extended_path = find_path(graph, vertex, end_vertex, path)
 
             for p in extended_path:
                 paths.append(p)
     return paths
+
+def visualize(graph_data, path):
+
+    plot = figure(title='Graph Layout Demonstration', x_range=(-1.1,1.1), y_range=(-1.1,1.1),
+              tools='', toolbar_location=None)
+    graph = GraphRenderer()
+
+    node_indices = list(map(int, graph_data.keys()))
+    N = len(node_indices)
+    ends = [item for sublist in graph_data.values() for item in sublist]
+    starts = [int(item) for item in graph_data.keys() for k in range(len(graph_data[item]))]
+    graph.node_renderer.data_source.add(node_indices, 'index')
+    graph.node_renderer.data_source.add(['blue']*N, 'color')
+    graph.node_renderer.glyph = Oval(height=0.1, width=0.2, fill_color='color')
+
+    graph.edge_renderer.data_source.data = dict(
+        start=starts,
+        end=ends)
+
+    circ = [i*2*math.pi/N for i in node_indices]
+    x = [math.cos(i) for i in circ]
+    y = [math.sin(i) for i in circ]
+
+    graph_layout = dict(zip(node_indices, zip(x, y)))
+    graph.layout_provider = StaticLayoutProvider(graph_layout=graph_layout)
+    
+    plot.renderers.append(graph)
+
+    output_file('graph.html')
+    show(plot)
+
+
 
 if __name__ == '__main__':
     try:

@@ -7,10 +7,11 @@ import phonenumbers
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
-from puzzlShop import app, bootstrap, db, login_manager, User, Product
+from puzzlShop import app, bootstrap, db, login_manager, User, Product, Cart
 from operator import itemgetter
 import simplejson as json
 import ast
+from datetime import datetime
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired(), Length(min=4, max=60)])
@@ -138,6 +139,24 @@ def get_products():
     tags = db.engine.execute('SELECT * FROM tags')
     
     return render_template('/products.html', products=products, tags=tags)
+
+@app.route('/cart/add', methods=['POST'])
+def add_to_cart():
+    if not current_user.is_authenticated:
+        redirect('/')
+    else:
+        keyd = list(request.form.keys())
+        product = int(request.form['product'])
+        print(product)
+        cart = Cart.query.filter_by(userid=current_user.id).first()
+        if not cart:
+            cart = Cart(userid=current_user.id, createdat=datetime.now())
+            db.session.add(cart)
+            db.session.commit()
+        cart.add_to_cart(product, 1)
+
+    return redirect(url_for('/products'))
+        
 
 if __name__=='__main__':
     app.run()
