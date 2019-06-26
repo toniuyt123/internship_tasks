@@ -20,26 +20,34 @@ def find_route(circles):
                 graph['%s'%i].append(j)
 
     path = find_path(graph, 0, len(circles) -1 )
-    print(len(path) - 1)
+    #print(graph)
+    #print(path)
+    if path == []:
+        print(-1)
+    else:
+        print(min(map(len, path)) - 1)
     plt.show()
 
 def have_edge(x1, y1, x2, y2, r1, r2):
-    return (x1 - x2)**2 + (y1 - y2)**2 <= (r1 + r2)**2 
+    dist = math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+    return dist < r1 + r2 and dist > abs(r1-r2)
 
-def find_path(graph, star_vertex, end_vertex, path=None):
-    if path is None:
-        path = []
-    path.append(star_vertex)
+def find_path(graph, star_vertex, end_vertex, path=[]):
+    path = path + [star_vertex]
     if(star_vertex == end_vertex):
+        #print('found')
+        #print(path)
         return [path]
     paths=[]
     for vertex in graph['%s'%star_vertex]:
         if vertex not in path:
+            #print("entering new")
+            #print(path)
             extended_path = find_path(graph, vertex, end_vertex, path)
 
-            if extended_path:
-                return extended_path
-    return None
+            for p in extended_path:
+                paths.append(p)
+    return paths
 
 if __name__ == '__main__':
     try:
