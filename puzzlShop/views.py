@@ -87,7 +87,6 @@ def login():
                 if check_password_hash(user.passwordhash, form.password.data):
                     login_user(user, remember=form.remember.data)
                     return redirect('/')
-
             return '<h1>Invalid username or password</h1>'
 
         return render_template('login.html', form=form)
@@ -124,8 +123,7 @@ def get_products():
                             LEFT JOIN productstags pt ON pt.productid = p.id
                             LEFT JOIN tags t ON pt.tagid = t.id
                             GROUP BY p.id, p.name, p.description, p.price, p.difficulty, p.rating, p.quantity
-                            HAVING \'%s\' = ANY(array_agg(t.name)); 
-            ''' % (tags[0]))
+                            HAVING \'%s\' = ANY(array_agg(t.name))''' % (tags[0])) + ''.join((' OR \'%s\' = ANY(array_agg(t.name))' % t for t in tags[1:]))
             result = db.engine.execute(statement)
         products = [dict(row.items()) for row in result]
     if products == []:

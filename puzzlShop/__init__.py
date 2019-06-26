@@ -22,27 +22,21 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-class User(db.Model, UserMixin):
-    __table__ = db.Model.metadata.tables['users']
-
-    def __repr__(self):
-        return self.DISTRICT
-
-    def is_admin(self):
-        return self.is_admin
-
-class Product(db.Model):
-    __table__ = db.Model.metadata.tables['products']
-
 
 @login_manager.user_loader
 def get_user(id):
   return User.query.get(int(id))
 
+class User(db.Model, UserMixin):
+    __table__ = db.Model.metadata.tables['users']
+
+class Product(db.Model):
+    __table__ = db.Model.metadata.tables['products']
+
 file_path = op.join(op.dirname(__file__), 'static/img')
 class ImageView(sqla.ModelView):
     def is_accessible(self):
-        return current_user.is_amdin()
+        return current_user.is_admin
 
     def inaccessible_callback(self):
         return redirect(url_for('/login'))
