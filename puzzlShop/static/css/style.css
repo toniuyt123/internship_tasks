@@ -1,6 +1,10 @@
 
 body {
     padding: 10px;
+    margin:0 10%;
+    -moz-box-shadow:    3px 3px 5px 6px #ccc; 
+    box-shadow:         0px 0px 3px 6px #ccc;
+    height: 100%;
 }
 
 .product-name {
@@ -17,6 +21,11 @@ body {
 .product-image {
     width: 100%;
     height: auto;
+}
+
+.product-container {
+    margin:0;
+    margin-bottom: 15px;
 }
 
 .star-ratings-sprite {
@@ -69,4 +78,35 @@ body {
 }
 #toolbar {
     margin: 10px 0;
+}
+table {
+    font-size: 2em;
+}
+
+#in-stock, #out-of-stock {
+    color: white;
+    font-weight: bold;
+    border-radius: 5px;
+    padding: 3px;
+}
+
+#in-stock {
+    background-color: green;
+}
+
+#out-of-stock {
+    background-color: red;
+}
+
+.delete-item {
+    vertical-align: middle !important; 
+    font-size: 2vw;
+}
+
+.delete-btn {
+    border: none;
+}
+
+.delete-item a {
+    text-decoration: none;
 }

@@ -1,8 +1,7 @@
-from bokeh.io import show, output_file
-from bokeh.plotting import figure
-from bokeh.models import GraphRenderer, StaticLayoutProvider, Oval, MultiLine
-from bokeh.palettes import Spectral9
-
+import networkx as nx
+import matplotlib.pyplot as plt, mpld3
+from operator import itemgetter
+from matplotlib.patches import ConnectionPatch
 import math
 
 def find_route(circles):
@@ -16,14 +15,14 @@ def find_route(circles):
 
     path = find_path(graph, 0, len(circles) -1 )
     #print(graph)
-    #print(path)
+    print(path)
     if path == []:
         print(-1)
     else:
         min_path = min(path, key=len)
         print(len(min_path) - 1)
 
-        visualize(graph, min_path)
+        visualize(graph, min_path, circles)
 
 def have_edge(x1, y1, x2, y2, r1, r2):
     dist = math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
@@ -42,35 +41,37 @@ def find_path(graph, star_vertex, end_vertex, path=[]):
                 paths.append(p)
     return paths
 
-def visualize(graph_data, path):
+def visualize(graph_data, path, circles):
+    G = nx.DiGraph()
+    for key in graph_data.keys():
+        for connection in graph_data[key]:
+            G.add_path([int(key), connection])
 
-    plot = figure(title='Graph Layout Demonstration', x_range=(-1.1,1.1), y_range=(-1.1,1.1),
-              tools='', toolbar_location=None)
-    graph = GraphRenderer()
+    fig, axs = plt.subplots()
+    plt.figure(figsize=(8,6))
 
-    node_indices = list(map(int, graph_data.keys()))
-    N = len(node_indices)
-    ends = [item for sublist in graph_data.values() for item in sublist]
-    starts = [int(item) for item in graph_data.keys() for k in range(len(graph_data[item]))]
-    graph.node_renderer.data_source.add(node_indices, 'index')
-    graph.node_renderer.data_source.add(['blue']*N, 'color')
-    graph.node_renderer.glyph = Oval(height=0.1, width=0.2, fill_color='color')
+    node_colors = ['red' if n in path else 'blue' for n in G.nodes()]
+    nx.draw_networkx(G, with_labels=True, node_color=node_colors)
+    plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+    plt.tick_params(axis='y', which='both', right=False, left=False, labelleft=False)
+    for pos in ['right','top','bottom','left']:
+        plt.gca().spines[pos].set_visible(False)
 
-    graph.edge_renderer.data_source.data = dict(
-        start=starts,
-        end=ends)
+    i = 0
+    for circle in circles:
+        x, y, r = circle[0], circle[1], circle[2]
+        c = plt.Circle((x, y), r, color='b', fill=False)
+        axs.text(x, y, str(i))
+        i += 1
+        axs.add_patch(c)
 
-    circ = [i*2*math.pi/N for i in node_indices]
-    x = [math.cos(i) for i in circ]
-    y = [math.sin(i) for i in circ]
+    for i in range(len(path) - 1):
+        c1, c2 = circles[path[i]], circles[path[i + 1]]
+        conn = ConnectionPatch(xyA=(c1[0], c1[1]), xyB=(c2[0], c2[1]), coordsA='data', arrowstyle="-|>")
+        axs.add_patch(conn)
 
-    graph_layout = dict(zip(node_indices, zip(x, y)))
-    graph.layout_provider = StaticLayoutProvider(graph_layout=graph_layout)
-    
-    plot.renderers.append(graph)
-
-    output_file('graph.html')
-    show(plot)
+    axs.autoscale()
+    plt.show()
 
 
 

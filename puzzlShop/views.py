@@ -7,11 +7,12 @@ import phonenumbers
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
-from puzzlShop import app, bootstrap, db, login_manager, User, Product, Cart
+from puzzlShop import app, bootstrap, db, login_manager, User, Product, Cart, CartItem, stripe_keys, Order
 from operator import itemgetter
 import simplejson as json
 import ast
 from datetime import datetime
+import stripe
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[InputRequired(), Length(min=4, max=60)])
@@ -143,20 +144,83 @@ def get_products():
 @app.route('/cart/add', methods=['POST'])
 def add_to_cart():
     if not current_user.is_authenticated:
-        redirect('/')
+        return redirect('/')
     else:
-        keyd = list(request.form.keys())
         product = int(request.form['product'])
-        print(product)
-        cart = Cart.query.filter_by(userid=current_user.id).first()
-        if not cart:
-            cart = Cart(userid=current_user.id, createdat=datetime.now())
-            db.session.add(cart)
-            db.session.commit()
+        cart = get_cart(current_user.id)
         cart.add_to_cart(product, 1)
 
-    return redirect(url_for('/products'))
+    return redirect(url_for('cart'))
         
+@app.route('/cart/remove', methods=['POST'])
+def remove_from_cart():
+    if not current_user.is_authenticated:
+        return redirect('/')
+    else:
+        product = int(request.form['product'])
+        cart = get_cart(current_user.id)
+        quantity = 1 if request.form['quantity'] is None else int(request.form['quantity'])
+        cart.remove_from_cart(product, quantity)
+
+    return redirect(url_for('cart'))
+
+@app.route('/cart', methods=['GET', 'POST'])
+def cart():
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    else:
+        cart = get_cart(current_user.id)
+        cartitems = db.session.query(CartItem, Product).filter(CartItem.cartid == cart.id).filter(CartItem.productid == Product.id).all()
+
+        return render_template('cart.html', cartitems=cartitems, key=stripe_keys['publishable_key'], 
+                                empty= True if cartitems == [] else False )
+
+def get_cart(id):
+    cart = Cart.query.filter_by(userid=current_user.id,cartmode='active').first()
+    if not cart:
+        cart = Cart(userid=current_user.id, createdat=datetime.now())
+        db.session.add(cart)
+        db.session.commit()
+    return cart
+
+@app.route('/charge', methods=['POST'])
+def charge():
+    # Amount in cents
+    amount = int(float(request.form['amount']) * 100)
+    cartid = request.form['cart']
+    print(request.form)
+    user = User.query.filter_by(id=cartid).first_or_404()
+
+    customer = stripe.Customer.create(
+        email=user.email,
+        source=request.form['stripeToken']
+    )
+
+    charge = stripe.Charge.create(
+        customer=customer.id,
+        amount=amount,
+        currency='usd',
+        description='Flask Charge'
+    )
+    cart = Cart.query.filter_by(id=cartid).first()
+    cart.cartmode = 'quote'
+    db.session.add(cart)
+
+    order = Order(userid=user.id, cartid=cartid, orderedat=datetime.now(), addressid=1, orderammount=amount / 100)
+    db.session.add(order)
+    db.session.commit()
+
+    return render_template('charge.html', amount=amount)
+
+@app.route('/cartitem_delete', methods=['GET', 'POST'])
+def delete_item():
+    cartid = request.args['cartid']
+    productid = request.args['productid']
+    item = CartItem.query.filter_by(cartid=cartid, productid=productid).first()
+    db.session.delete(item)
+    db.session.commit()
+
+    return redirect(url_for('cart'))
 
 if __name__=='__main__':
     app.run()
