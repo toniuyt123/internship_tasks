@@ -14,6 +14,8 @@ class BaseConfig(object):
     POSTGRES_PW = get_env_variable("POSTGRES_PW")
     POSTGRES_DB = get_env_variable("POSTGRES_DB")
     SECRET_KEY = get_env_variable("SECRET_KEY")
+    RECAPTCHA_PUBLIC_KEY = get_env_variable("RECAPTCHA_PUBLIC_KEY")
+    RECAPTCHA_PRIVATE_KEY = get_env_variable("RECAPTCHA_PRIVATE_KEY")
     SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://{user}:{pw}@{url}/{db}'.format(user=POSTGRES_USER,pw=POSTGRES_PW,url=POSTGRES_URL,db=POSTGRES_DB)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_PASSWORD_SALT = 'tainatasolnaparolata'

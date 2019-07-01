@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% import "bootstrap/wtf.html" as wtf %}
 
 {% block styles %}
 {{super()}}
@@ -35,7 +36,7 @@
                     <button class="delete-btn" type="submit">&#128465;</a>
                 </form>
             </td>
-            <td><img src="{{ url_for('static', filename='img/' + item[1].imagepath) }}"
+            <td><img src="{{ item[1].imagepath }}"
                     class="img-thumbnail rounded product-image" id="cartimg" /> </td>
             <td> {{ item[1].name }} </td>
             <td>{% if item[1].quantity > 0 %}
@@ -44,7 +45,7 @@
                     <span id='out-of-stock'>Out of stock</span>
                     {% endif %}
             </td>
-            <td> {{ item[1].price }}$</td>
+            <td class='price-col'> ${{ item[1].price }}</td>
             <td>
                 {{ item[0].quantity }}
                 <div>
@@ -56,20 +57,27 @@
                     </form>
                 </div>
             </td>
-            <td>
+            <td class = 'price-col'>
                 {% set products_price = item[1].price * item[0].quantity %}
-                {{ products_price }}$
+                ${{ products_price }}
                 {% if total_price.append(total_price.pop() + products_price) -%}{% endif %}
             </td>
         </tr>
         {% endfor %}
         <tr>
             <td colspan="6"></td>
-            <td>{{ total_price[0] }}$</td>
+            <td class='price-col'>${{ total_price[0] }}</td>
         </tr>
     </tbody>
 </table>
+
 <form action="/charge" method="post">
+    {{ form.hidden_tag() }}
+    {{ wtf.form_field(form.street) }}
+    {{ wtf.form_field(form.city) }}
+    {{ wtf.form_field(form.state) }}
+    {{ wtf.form_field(form.country) }}
+    {{ wtf.form_field(form.zipCode) }}
     <input type="hidden" name="cart" value="{{ cartitems[0][0].cartid }}">
     <input type="hidden" name="amount" value="{{ total_price[0] }}">
     <script src="https://checkout.stripe.com/checkout.js" class="stripe-button" data-key="{{ key }}"

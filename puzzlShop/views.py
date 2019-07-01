@@ -1,16 +1,18 @@
 from flask import Flask, render_template, redirect, url_for, request, flash, Blueprint
-from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, ValidationError
+from flask_wtf import FlaskForm, RecaptchaField
+from wtforms import StringField, PasswordField, BooleanField, ValidationError, SelectField
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from werkzeug.security import generate_password_hash, check_password_hash
 import phonenumbers
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
-from puzzlShop import app, bootstrap, db, login_manager, User, Product, Cart, CartItem, stripe_keys, Order
+from puzzlShop import app, bootstrap, db, login_manager, User, Product, Cart, CartItem, stripe_keys, Order, Address
 from operator import itemgetter
 import simplejson as json
 import ast
+import csv
+import os
 from datetime import datetime
 import stripe
 
@@ -27,7 +29,29 @@ class RegisterForm(FlaskForm):
         InputRequired(), Length(min=8, max=80),
         EqualTo('confirm', message='Passwords must match')])
     confirm = PasswordField('Confirm Password')
+    recaptcha = RecaptchaField()
 
+class AddressForm(FlaskForm):
+    countries = []
+    abs_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'countries.csv')
+    with open(abs_path) as cn:
+        reg_reader = csv.DictReader(cn, delimiter=',')
+        for row in reg_reader:
+            countries.append( (row['Alpha-3 code'], row['Country']) )
+    street = StringField('Street', validators=[InputRequired(), Length(max=200)])
+    city = StringField('City', validators=[InputRequired(), Length(max=85)])
+    state = StringField('State', validators=[InputRequired(), Length(max=85)])
+    country = SelectField('Country', choices = countries, validators = [InputRequired()])
+    zipCode = StringField('Zip', validators=[InputRequired(), Length(max=10)])
+
+class EmailForm(FlaskForm):
+    email = StringField('Email', validators=[InputRequired(), Email(message='Invalid email'), Length(max=100)])
+
+class PasswordForm(FlaskForm):
+    password = PasswordField('Password', validators=[
+        InputRequired(), Length(min=8, max=80),
+        EqualTo('confirm', message='Passwords must match')])
+    confirm = PasswordField('Confirm Password')
 
 @app.route('/')
 @app.route('/index')
@@ -110,7 +134,6 @@ def get_products():
         keys = list(request.form.keys())
         statement = ''
         result = []
-        print(keys)
         if 'search_query' in keys:
             query = request.form['search_query']
             statement = ('''SELECT * FROM products 
@@ -159,20 +182,23 @@ def remove_from_cart():
     else:
         product = int(request.form['product'])
         cart = get_cart(current_user.id)
-        quantity = 1 if request.form['quantity'] is None else int(request.form['quantity'])
+        quantity = 1 if 'quantity' not in request.form.keys() else int(request.form['quantity'])
         cart.remove_from_cart(product, quantity)
 
     return redirect(url_for('cart'))
 
 @app.route('/cart', methods=['GET', 'POST'])
 def cart():
+    form = AddressForm()
+
+
     if not current_user.is_authenticated:
         return redirect(url_for('login'))
     else:
         cart = get_cart(current_user.id)
         cartitems = db.session.query(CartItem, Product).filter(CartItem.cartid == cart.id).filter(CartItem.productid == Product.id).all()
 
-        return render_template('cart.html', cartitems=cartitems, key=stripe_keys['publishable_key'], 
+        return render_template('cart.html', cartitems=cartitems, form=form, key=stripe_keys['publishable_key'], 
                                 empty= True if cartitems == [] else False )
 
 def get_cart(id):
@@ -183,34 +209,40 @@ def get_cart(id):
         db.session.commit()
     return cart
 
-@app.route('/charge', methods=['POST'])
+@app.route('/charge', methods=['POST', 'GET'])
 def charge():
-    # Amount in cents
-    amount = int(float(request.form['amount']) * 100)
-    cartid = request.form['cart']
-    print(request.form)
-    user = User.query.filter_by(id=cartid).first_or_404()
+    form = AddressForm()
+    if form.validate_on_submit():
+        address = Address(address=form.street.data, city=form.city.data, state=form.state.data, country=form.country.data, zip=form.zipCode.data)
+        db.session.add(address)
 
-    customer = stripe.Customer.create(
-        email=user.email,
-        source=request.form['stripeToken']
-    )
+        # Amount in cent
+        amount = int(float(request.form['amount']) * 100)
+        cartid = request.form['cart']
 
-    charge = stripe.Charge.create(
-        customer=customer.id,
-        amount=amount,
-        currency='usd',
-        description='Flask Charge'
-    )
-    cart = Cart.query.filter_by(id=cartid).first()
-    cart.cartmode = 'quote'
-    db.session.add(cart)
+        cart = Cart.query.filter_by(id=cartid).first()
+        cart.cartmode = 'quote'
+        db.session.add(cart)
+        user = User.query.filter_by(id=cart.userid).first_or_404()
 
-    order = Order(userid=user.id, cartid=cartid, orderedat=datetime.now(), addressid=1, orderammount=amount / 100)
-    db.session.add(order)
-    db.session.commit()
+        customer = stripe.Customer.create(
+            email=user.email,
+            source=request.form['stripeToken']
+        )
 
-    return render_template('charge.html', amount=amount)
+        charge = stripe.Charge.create(
+            customer=customer.id,
+            amount=amount,
+            currency='usd',
+            description='Flask Charge'
+        )
+        
+
+        order = Order(userid=user.id, cartid=cartid, orderedat=datetime.now(), addressid=address.id, orderammount=amount / 100)
+        db.session.add(order)
+        db.session.commit()
+
+        return render_template('charge.html', amount=amount)
 
 @app.route('/cartitem_delete', methods=['GET', 'POST'])
 def delete_item():
@@ -221,6 +253,50 @@ def delete_item():
     db.session.commit()
 
     return redirect(url_for('cart'))
+
+@app.route('/reset', methods=["GET", "POST"])
+def reset():
+    form = EmailForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first_or_404()
+
+        subject = "Password reset requested"
+        token = generate_confirmation_token(form.email.data)
+        recover_url = url_for(
+            'reset_with_token',
+            token=token,
+            _external=True)
+
+        html = render_template(
+            'recover.html',
+            recover_url=recover_url)
+
+        send_email(user.email, subject, html)
+
+        return redirect(url_for('index'))
+    return render_template('reset.html', form=form)
+
+@app.route('/reset/<token>', methods=["GET", "POST"])
+def reset_with_token(token):
+    try:
+        email = confirm_token(token)
+    except:
+        flash('The confirmation link is invalid or has expired.', 'danger')
+
+    form = PasswordForm()
+
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=email).first_or_404()
+
+        hashed_password = generate_password_hash(form.password.data, method='sha256')
+        user.passwordhash = hashed_password
+    
+        db.session.add(user)
+        db.session.commit()
+
+        return redirect(url_for('login'))
+
+    return render_template('reset_with_token.html', form=form, token=token)
 
 if __name__=='__main__':
     app.run()

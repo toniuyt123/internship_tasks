@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block body %}
+<form action="{{ url_for('reset_with_token', token=token) }}" method="POST">
+    {{ form.hidden_tag() }}
+    {{ wtf.form_field(form.password) }}
+    {{ wtf.form_field(form.confirm) }}
+    <input type="submit" value="Change my password" />
+</form>
+{% endblock %}

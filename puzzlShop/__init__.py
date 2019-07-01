@@ -11,6 +11,7 @@ from flask_admin.contrib import sqla
 from jinja2 import Markup
 from datetime import datetime
 import stripe
+import csv
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object("puzzlShop.config.BaseConfig")
@@ -31,7 +32,6 @@ stripe_keys = {
 }
 
 stripe.api_key = stripe_keys['secret_key']
-
 
 @login_manager.user_loader
 def get_user(id):
@@ -82,6 +82,9 @@ class Address(db.Model):
 file_path = op.join(op.dirname(__file__), 'static/img')
 
 class AuthView(sqla.ModelView):
+    can_delete = False
+    can_export = True
+
     def is_accessible(self):
         if current_user.is_authenticated:
             return current_user.is_admin
@@ -91,6 +94,17 @@ class AuthView(sqla.ModelView):
         return redirect(url_for('login'))
 
 class ProductView(AuthView):
+    def _list_thumbnail(self, view, model, name):
+        print(model.imagepath)
+        if not model.imagepath:
+            return ''
+
+        return Markup('<img src="%s">' % url_for('static', filename=form.thumbgen_filename('img/'+model.imagepath)))
+
+    column_formatters = {
+        'imagepath': _list_thumbnail
+    }
+
     form_overrides = {
         'imagepath': form.ImageUploadField
     }
@@ -99,7 +113,8 @@ class ProductView(AuthView):
         'imagepath': {
             'label': 'Image',
             'base_path': file_path,
-            'allow_overwrite': False
+            'allow_overwrite': False,
+            'thumbnail_size': (100, 100, True)
         }
     }
 

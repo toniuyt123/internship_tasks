@@ -18,6 +18,10 @@ body {
     font-size: 2em;
 }
 
+.price, .price-col {
+    text-align: right;
+}
+
 .product-image {
     width: 100%;
     height: auto;
