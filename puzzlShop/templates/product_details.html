@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{{product.name}}</h1>
+<hr>
+<div class="row">
+    <div class="col-lg-4">
+        <img src="{{product.imagepath}}" />
+    </div>
+    <div class="col-lg-8">
+        <div class="row">
+            <div class="col-lg-9">
+                <p class="light-text">User rating:</p>
+                <form class="rate" action="/rate" method='POST'>
+                    <input type="hidden" name="productid" value="{{product.id}}">
+                    <input type="radio" id="star5" name="rate" value="5" onclick="this.form.submit()" />
+                    <label for="star5" title="text">5 stars</label>
+                    <input type="radio" id="star4" name="rate" value="4" onclick="this.form.submit()" />
+                    <label for="star4" title="text">4 stars</label>
+                    <input type="radio" id="star3" name="rate" value="3" onclick="this.form.submit()" />
+                    <label for="star3" title="text">3 stars</label>
+                    <input type="radio" id="star2" name="rate" value="2" onclick="this.form.submit()" />
+                    <label for="star2" title="text">2 stars</label>
+                    <input type="radio" id="star1" name="rate" value="1" onclick="this.form.submit()" />
+                    <label for="star1" title="text">1 star</label>
+                </form>
+                <p class="light-text">{{review_count}} reviews</p>
+                <p>{{product.description}}</p>
+            </div>
+            <div class="col-lg-3" style="text-align:right">
+                <p class="price">${{product.price}}</p>
+                {% if product.quantity > 0 %}
+                <span id='in-stock'>In stock</span>
+                    {% else %}
+                    <span id='out-of-stock'>Out of stock</span>
+                    {% endif %}
+                    <form action="/cart/add" method='POST'>
+                        <input type="hidden" value='{{product.id}}' name='product'>
+                        <button id="cartButton" name='product' type="submit" class="btn btn-secondary btn-lg">Add to
+                            cart</button>
+                    </form>
+            </div>
+        </div>
+    </div>
+</div>
+<hr>
+
+{% endblock %}

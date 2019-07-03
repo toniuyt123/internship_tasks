@@ -27,6 +27,7 @@
     </thead>
     <tbody>
         {% set total_price = [0] %}
+        {% set ns = namespace(valid=true) %}
         {% for item in cartitems %}
         <tr id="item-{{item[1].id}}">
             <td class="delete-item">
@@ -36,13 +37,13 @@
                     <button class="delete-btn" type="submit">&#128465;</a>
                 </form>
             </td>
-            <td><img src="{{ item[1].imagepath }}"
-                    class="img-thumbnail rounded product-image" id="cartimg" /> </td>
+            <td><img src="{{ item[1].imagepath }}" class="img-thumbnail rounded product-image" id="cartimg" /> </td>
             <td> {{ item[1].name }} </td>
             <td>{% if item[1].quantity > 0 %}
-                <span id='in-stock'>In stock</sp+an>
+                <span id='in-stock'>In stock</span>
                     {% else %}
                     <span id='out-of-stock'>Out of stock</span>
+                    {% set ns.valid = false %}
                     {% endif %}
             </td>
             <td class='price-col'> ${{ item[1].price }}</td>
@@ -50,14 +51,16 @@
                 {{ item[0].quantity }}
                 <div>
                     <form action="cart/remove" method="POST" class="float-left">
-                        <button class="btn btn-info" name='product' value="{{item[1].id}}" type="submit">-</button>
+                        <button class="btn btn-info quantity-btn" name='product' value="{{item[1].id}}"
+                            type="submit">-</button>
                     </form>
                     <form action="cart/add" method="POST">
-                        <button class="btn btn-info" name='product' value="{{item[1].id}}" type="submit">+</button>
+                        <button class="btn btn-info quantity-btn" name='product' value="{{item[1].id}}"
+                            type="submit">+</button>
                     </form>
                 </div>
             </td>
-            <td class = 'price-col'>
+            <td class='price-col'>
                 {% set products_price = item[1].price * item[0].quantity %}
                 ${{ products_price }}
                 {% if total_price.append(total_price.pop() + products_price) -%}{% endif %}
@@ -71,6 +74,7 @@
     </tbody>
 </table>
 
+<h2>Enter address:</h2>
 <form action="/charge" method="post">
     {{ form.hidden_tag() }}
     {{ wtf.form_field(form.street) }}
@@ -80,8 +84,14 @@
     {{ wtf.form_field(form.zipCode) }}
     <input type="hidden" name="cart" value="{{ cartitems[0][0].cartid }}">
     <input type="hidden" name="amount" value="{{ total_price[0] }}">
+    {% if ns.valid %}
     <script src="https://checkout.stripe.com/checkout.js" class="stripe-button" data-key="{{ key }}"
-        data-description="A Flask Charge" data-amount="{{ total_amount }}" data-locale="auto"></script>
+        data-description="About ot pay {{ total_price[0] }}" data-amount="{{ total_price[0]*100 }}"
+        data-locale="auto"></script>
+    {% else %}
+    <h3 class="text-danger">Your cart contains items that are out of stock! Please remove them or wait for delivery.
+    </h3>
+    {% endif %}
 </form>
 {% endif %}
 {% endblock %}

@@ -9,6 +9,7 @@ from flask_admin import Admin, form,  expose, AdminIndexView
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib import sqla
 from jinja2 import Markup
+from jinja2.ext import loopcontrols
 from datetime import datetime
 import stripe
 import csv
@@ -40,8 +41,16 @@ def get_user(id):
 class User(db.Model, UserMixin):
     __table__ = db.Model.metadata.tables['users']
 
+class Tag(db.Model):
+    __table__ = db.Model.metadata.tables['tags']
+
 class Product(db.Model):
     __table__ = db.Model.metadata.tables['products']
+    tags = db.relationship('Tag', secondary="productstags",
+                            backref=db.backref('products', lazy='dynamic'))
+
+class ProductsTags(db.Model):
+    __table__ = db.Model.metadata.tables['productstags']
 
 class CartItem(db.Model):
     __table__ = db.Model.metadata.tables['cartitems']
@@ -78,6 +87,9 @@ class Order(db.Model):
 
 class Address(db.Model):
     __table__ = db.Model.metadata.tables['addresses']
+
+class Rating(db.Model):
+    __table__ = db.Model.metadata.tables['ratings']
 
 file_path = op.join(op.dirname(__file__), 'static/img')
 
@@ -118,6 +130,9 @@ class ProductView(AuthView):
         }
     }
 
+    column_hide_backrefs = False
+    column_list = ('id', 'name', 'price', 'description', 'imagepath', 'rating', 'difficulty', 'quantity', 'tags')
+
 class HomeView(AdminIndexView):
     def is_accessible(self):
         if current_user.is_authenticated:
@@ -132,5 +147,7 @@ admin = Admin(app, name='PuzzlShop', template_mode='bootstrap3', index_view=Home
 admin.add_view(AuthView(User, db.session))
 admin.add_view(ProductView(Product, db.session))
 admin.add_view(AuthView(Address, db.session))
+admin.add_view(AuthView(Tag, db.session))
+app.jinja_env.add_extension('jinja2.ext.loopcontrols')
 
 import puzzlShop.views
