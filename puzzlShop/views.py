@@ -4,9 +4,9 @@ import phonenumbers
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
-from puzzlShop import app, bootstrap, db, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
+from puzzlShop import app, AlchemyEncoder, bootstrap, db, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
 from operator import itemgetter
-import simplejson as json
+import json
 import ast
 import csv
 import os
@@ -208,48 +208,50 @@ def get_cart(id):
 def charge():
     form = AddressForm()
     if form.validate_on_submit():
-        address = Address(address=form.street.data, city=form.city.data,
-                          state=form.state.data, country=form.country.data, zip=form.zipCode.data)
-        db.session.add(address)
+        try:
+            address = Address(address=form.street.data, city=form.city.data,
+                            state=form.state.data, country=form.country.data, zip=form.zipCode.data)
+            db.session.add(address)
 
-        # Amount in cent
-        amount = int(float(request.form['amount']) * 100)
-        cartid = request.form['cart']
+            # Amount in cent
+            amount = int(float(request.form['amount']) * 100)
+            cartid = request.form['cart']
 
-        cart = Cart.query.filter_by(id=cartid).first()
+            cart = Cart.query.filter_by(id=cartid).first()
 
-        result = db.engine.execute(""" SELECT SUM(p.price) FROM cartitems c
-                                            LEFT JOIN products p ON p.id = c.productid
-                                            WHERE c.cartid = %s
-                                            GROUP BY c.cartid""", (cartid,))
-        real_amount = -1
-        for row in result:
-            real_amount = int(row[0]*100)
-        if amount != real_amount:
-            return redirect(url_for('cart'))
+            result = db.engine.execute(""" SELECT SUM(p.price) FROM cartitems c
+                                                LEFT JOIN products p ON p.id = c.productid
+                                                WHERE c.cartid = %s
+                                                GROUP BY c.cartid""", (cartid,))
+            real_amount = -1
+            for row in result:
+                real_amount = int(row[0]*100)
+            if amount != real_amount:
+                return redirect(url_for('cart'))
 
-        cart.cartmode = 'quote'
-        db.session.add(cart)
-        user = User.query.filter_by(id=cart.userid).first_or_404()
+            cart.cartmode = 'quote'
+            db.session.add(cart)
+            user = User.query.filter_by(id=cart.userid).first_or_404()
 
-        customer = stripe.Customer.create(
-            email=user.email,
-            source=request.form['stripeToken']
-        )
+            customer = stripe.Customer.create(
+                email=user.email,
+                source=request.form['stripeToken']
+            )
 
-        charge = stripe.Charge.create(
-            customer=customer.id,
-            amount=amount,
-            currency='usd',
-            description='Flask Charge'
-        )
+            charge = stripe.Charge.create(
+                customer=customer.id,
+                amount=amount,
+                currency='usd',
+                description='Flask Charge'
+            )
 
-        order = Order(userid=user.id, cartid=cartid, orderedat=datetime.now(
-        ), addressid=address.id, orderammount=amount / 100)
-        db.session.add(order)
-        db.session.commit()
-
-        return render_template('charge.html', amount=amount)
+            order = Order(userid=user.id, cartid=cartid, orderedat=datetime.now(
+            ), addressid=address.id, orderammount=amount / 100)
+            db.session.add(order)
+            db.session.commit()
+            return render_template('charge.html', amount=amount)
+        except stripe.error.StripeError:
+            db.session.rollback()
     return redirect(url_for('cart'))
 
 
@@ -331,3 +333,9 @@ def rate():
         return redirect("/products/%s" % (product.id,))
     else:
         return redirect(url_for('login'))
+
+@app.route('/analytics')
+def analitycs():
+    orders = Order.query.all()
+
+    return json.dumps(orders, cls=AlchemyEncoder)

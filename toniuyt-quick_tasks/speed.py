@@ -37,7 +37,7 @@ def find_path(start, end, roads, trail, min_speed = 0):
         elif r['road'][0] == start and r['road'][1] not in trail:
             trail.append(r['road'][1])
             found = find_path(r['road'][1], end, roads, trail)
-            #print(found)
+            print(found)
             if found != 0:
                 #speeds.append(r['speed'])
                 for f in found:
