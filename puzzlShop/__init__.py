@@ -1,10 +1,12 @@
 import os
 import os.path as op
-from flask import Flask, url_for, redirect, jsonify
+from flask import Flask, url_for, redirect, jsonify, Blueprint, render_template
 from flask_mail import Mail
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, current_user
+from flask_login import UserMixin
+from flask_login_multi.login_manager import LoginManager   
+from flask_login_multi import current_user, login_user
 from flask_admin import Admin, form,  expose, AdminIndexView, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib import sqla
@@ -12,12 +14,14 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from jinja2 import Markup
 from jinja2.ext import loopcontrols
 from datetime import datetime
+from .forms import LoginForm
 import stripe
 import csv
 import json
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object("puzzlShop.config.BaseConfig")
+
 mail = Mail(app)
 bootstrap = Bootstrap(app)
 
@@ -26,8 +30,16 @@ db.Model.metadata.reflect(db.engine)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login'
+login_manager.blueprint_login_views = {  
+    'user':  "user.user_login",  
+    'admin': "admin.admin_login",  
+}  
 
+#login_manager.login_view = 'login'
+
+admin_app = Blueprint('adminn', __name__)  
+#user_app = Blueprint('user', __name__, url_prefix="/user")  
+app.register_blueprint(admin_app)
 
 stripe_keys = {
   'secret_key': os.environ['SECRET_KEY'],
@@ -37,8 +49,12 @@ stripe_keys = {
 stripe.api_key = stripe_keys['secret_key']
 
 @login_manager.user_loader
-def get_user(id):
-  return User.query.get(int(id))
+def load_user(id, endpoint='admin'):
+    print(endpoint)
+    if endpoint == 'admin':
+        return Admins.query.get(id)
+    else:
+        return User.query.get(id)
 
 class User(db.Model, UserMixin):
     __table__ = db.Model.metadata.tables['users']
@@ -99,10 +115,16 @@ class Role(db.Model):
 class AdminsRoles(db.Model):
     __table__ = db.Model.metadata.tables['adminsroles']
 
-class Admins(db.Model, UserMixin):
+class Admins(db.Model):
     __table__ = db.Model.metadata.tables['admins']
     roles = db.relationship('Role', secondary="adminsroles",
                             backref=db.backref('admins', lazy='dynamic'))
+
+    def get_id(self):
+        return self.id
+
+    def is_active(self):
+        return False
 
 
 
@@ -113,7 +135,6 @@ class AuthView(sqla.ModelView):
     can_export = True
 
     def is_accessible(self):
-        
         if current_user.is_authenticated:
             admin = Admins.query.filter_by(userid=current_user.id).first()
             if admin is None:
@@ -165,7 +186,7 @@ class ProductView(AuthView):
     column_searchable_list = ['id', 'name', 'price', 'description', 'imagepath', 'rating', 'difficulty', 'quantity']
 
 class HomeView(AdminIndexView):
-    def is_accessible(self):
+    '''def is_accessible(self):
         if current_user.is_authenticated:
             admin = Admins.query.filter_by(userid=current_user.id).first()
             if admin is None:
@@ -175,7 +196,23 @@ class HomeView(AdminIndexView):
         return False
 
     def inaccessible_callback(self, name):
-        return redirect(url_for('login'))
+        return redirect(url_for('login'))'''
+    @expose('/', methods=['GET', 'POST'])
+    def index(self):
+        if current_user.is_authenticated:
+            return redirect('/')
+        else:
+            form = LoginForm()
+            if form.validate_on_submit():
+                admin = Admins.query.filter_by(name=form.username.data,password=form.password.data).first()
+                if admin:
+                    login_user(admin)
+                    return redirect('/admin')
+                return '<h1>Invalid username or password</h1>'
+
+            return render_template('admin_login.html', form=form)
+
+        
 
 class AlchemyEncoder(json.JSONEncoder):
 
@@ -198,9 +235,16 @@ class AlchemyEncoder(json.JSONEncoder):
 class AnalyticsView(BaseView):
     @expose('/')
     def index(self):
-        orders = Order.query.all()
-        return self.render('analytics_index.html', orders=orders)
+        try:
+            orders = Order.query.all()
+            assert len(orders) >= 0
+            users = User.query.all()
+            active_users = [user for user in users if user.is_active]
+            little_products = [product for product in Product.query.all() if product.quantity < 5]
 
+            return self.render('analytics_index.html', orders=orders, active_users=len(active_users), little_products=little_products)
+        except:
+            return redirect('/admin')
 
 
 app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'

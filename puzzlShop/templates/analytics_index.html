@@ -1,23 +1,43 @@
 {% extends 'admin/master.html' %}
-{% block styles %}
-
-
-{% endblock %}
-
 {% block body %}
 <script type=text/javascript src="{{ url_for('static', filename='js/jquery.js') }}"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.js"></script>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
 <script type="text/javascript" src="{{url_for('static', filename='js/analytics.js')}}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css')}}">
+<p> Active users: {{active_users}}</p>
 <p> Total orders: {{orders|length}}</p>
 <div id="orders-graph"></div>
-<div class ="chart-parent" height="30vh" width="100vw">
+<div class="chart-parent" height="30vh" width="100vw">
     <canvas id="myChart"></canvas>
 </div>
-
+<div class="table-wrapper-scroll-y scrollbar">
+    <table class="table table-bordered table-striped mb-0" style="font-size:1em">
+        <thead>
+            <th>Name</th>
+            <th>Left</th>
+        </thead>
+        <tbody>
+            {% for product in little_products %}
+            <tr>
+                <td>
+                    {% if product.quantity == 0 %}
+                    <p class="text-danger">{{product.name}}</p>
+                    {% else %}
+                    <p class="text-warning">{{product.name}}</p>
+                    {% endif %}
+                </td>
+                <td>
+                    <p>{{product.quantity}}</p>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% block javascript %}
 <script>
-    function onlyUnique(value, index, self) { 
+    function onlyUnique(value, index, self) {
         return self.indexOf(value) === index;
     }
 
@@ -36,11 +56,11 @@
     }
     var dates = [];
     {% for order in orders %}
-        dates.push((new  Date('{{order.orderedat}}')).toUTCString().split(' ').slice(1, 3).join(' '));
+    dates.push((new Date('{{order.orderedat}}')).toUTCString().split(' ').slice(1, 3).join(' '));
     {% endfor %}
     var countData = [];
-    
-    for(var i =0;i < labels.length;i++) {
+
+    for (var i = 0; i < labels.length; i++) {
         countData.push(countInArray(dates, labels[i]))
     }
     var myChart = new Chart(ctx, {

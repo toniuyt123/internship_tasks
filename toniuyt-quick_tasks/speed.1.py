@@ -11,12 +11,16 @@ class RoadSpeed:
         res_max = max_speed
 
         two_way = []
+        speeds = []
         for r in roads:
             two_way.append(r)
             two_way.append({'road': (r['road'][1], r['road'][0]), 'speed': r['speed'] })
+            if r['speed'] not in speeds: 
+                speeds.append(r['speed'])
+        speeds = sorted(speeds)
 
-        for i in range(min_speed, max_speed + 1):
-            for j in reversed(range(i, max_speed + 1)):
+        for i in speeds:
+            for j in speeds[speeds.index(i):]:
                 self.g = dict.fromkeys(range(1, n+1))
                 for k in self.g.keys():
                     self.g[k] = []
@@ -28,16 +32,22 @@ class RoadSpeed:
                         #print('connections for')
                         #print(r['road'][0])
                         #print(g[r['road'][0]])
+                has_isolated = False
+                for k, v in self.g.items():
+                    if v == []:
+                        has_isolated = True
+                        break
                 #print(self.g)    
                 #print(graph.nodes())
-                if(self.is_connected() and (j - i) < (res_max - res_min)):
+                print(i,j)
+                if(not has_isolated and (j - i) < (res_max - res_min) and self.is_connected()):
                     res_max = j
                     res_min = i 
+                    break
+            
         print(res_max, res_min)
 
-    def is_connected(self, 
-                     vertices_encountered = None, 
-                     start_vertex=None):
+    def is_connected(self, vertices_encountered = None, start_vertex=None):
         """ determines if the graph is connected """
         if vertices_encountered is None:
             vertices_encountered = set()
@@ -58,7 +68,7 @@ class RoadSpeed:
 
 if __name__ == "__main__":
     try:
-        data = [[488,475,24350],
+        '''data = [[488,475,24350],
                     [162,226,9204],
                     [74,269,23095],
                     [130,72,17960],
@@ -2059,18 +2069,19 @@ if __name__ == "__main__":
                     [476,229,792],
                     [424,332,21683]]
         
+        '''
         N, M = map(int, input().split())
         if N < 2 or N > 1000 or M < 1 or M > 10000:
             raise ValueError("Invalid values")
 
         roads = []
-        '''for i in range(M):
+        for i in range(M):
             F, T, S = map(int, input().split())
             if F < 1 or F > N or T < 1 or T > N or S < 1 or S > 30000:
                 raise ValueError("Invlaid values")
-            roads.append({'road': (F, T), 'speed': S})'''
-        for row in data:
-            roads.append({'road': (row[0], row[1]), 'speed': row[2]})
+            roads.append({'road': (F, T), 'speed': S})
+        '''for row in data:
+            roads.append({'road': (row[0], row[1]), 'speed': row[2]})'''
         print('start')
         roadspeedcalc = RoadSpeed()
         roadspeedcalc.speed(N, roads)

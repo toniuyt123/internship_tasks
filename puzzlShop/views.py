@@ -1,10 +1,11 @@
 from flask import Flask, render_template, redirect, url_for, request, flash, Blueprint
 from werkzeug.security import generate_password_hash, check_password_hash
 import phonenumbers
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_login_multi.login_manager import LoginManager   
+from flask_login_multi import login_user, login_required, logout_user, current_user
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
-from puzzlShop import app, Admins, AlchemyEncoder, bootstrap, db, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
+from puzzlShop import app, admin_app, Admins, AlchemyEncoder, bootstrap, db, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
 from operator import itemgetter
 import json
 import ast
@@ -18,7 +19,7 @@ from .forms import LoginForm, RegisterForm, AddressForm, EmailForm, PasswordForm
 @app.route('/')
 @app.route('/index')
 def index():
-    print(current_user.username)
+    print(current_user)
     return render_template('index.html')
 
 
@@ -102,34 +103,38 @@ def get_products():
     page = 1
     min_price, max_price = 0, 1000
     if request.method == 'POST':
-        keys = list(request.form.keys())
-        statement = ''
-        result = []
-        if 'search_query' in keys:
-            query = request.form['search_query']
-            result = db.engine.execute('''SELECT * FROM products 
-                            WHERE to_tsvector(name) @@ to_tsquery(%s) OR
-                                to_tsvector(description) @@ to_tsquery(%s)''', (query, query))
-        tags = [t.name for t in Tag.query.all()]
-        if 'tags' in keys:
-            tags = request.form.getlist('tags')
+        try:
+            keys = list(request.form.keys())
+            statement = ''
+            result = []
+            if 'search_query' in keys:
+                query = request.form['search_query']
+                result = db.engine.execute('''SELECT * FROM products 
+                                WHERE to_tsvector(name) @@ to_tsquery(%s) OR
+                                    to_tsvector(description) @@ to_tsquery(%s)''', (query, query))
+            tags = [t.name for t in Tag.query.all()]
+            if 'tags' in keys:
+                tags = request.form.getlist('tags')
 
-        req_min, req_max = request.form.get('min'), request.form.get('max')
-        if req_min != None and req_min != '':
-            print(request.form.get('min'))
-            min_price = int(req_min)
-        if req_max != None and req_max != '':
-            max_price = int(req_max)
-        statement = ('''SELECT p.*, array_agg(t.name) AS tags FROM products p
-                        LEFT JOIN productstags pt ON pt.productid = p.id
-                        LEFT JOIN tags t ON pt.tagid = t.id
-                        WHERE p.price >= %s AND p.price <= %s
-                        GROUP BY p.id, p.name, p.description, p.price, p.difficulty, p.rating, p.quantity
-                        HAVING \'%s\' = ANY(array_agg(t.name))''' % (min_price, max_price, tags[0])) + ''.join((' OR \'%s\' = ANY(array_agg(t.name))' % t for t in tags[1:]))
-        result = db.engine.execute(statement)
-        products = [dict(row.items()) for row in result]
-        if 'page' in keys:
-            page = request.form.get('page')
+            req_min, req_max = request.form.get('min'), request.form.get('max')
+            if req_min != None and req_min != '':
+                print(request.form.get('min'))
+                min_price = int(req_min)
+            if req_max != None and req_max != '':
+                max_price = int(req_max)
+            statement = ('''SELECT p.*, array_agg(t.name) AS tags FROM products p
+                            LEFT JOIN productstags pt ON pt.productid = p.id
+                            LEFT JOIN tags t ON pt.tagid = t.id
+                            WHERE p.price >= %s AND p.price <= %s
+                            GROUP BY p.id, p.name, p.description, p.price, p.difficulty, p.rating, p.quantity
+                            HAVING \'%s\' = ANY(array_agg(t.name))''' % (min_price, max_price, tags[0])) + ''.join((' OR \'%s\' = ANY(array_agg(t.name))' % t for t in tags[1:]))
+            result = db.engine.execute(statement)
+            products = [dict(row.items()) for row in result]
+            if 'page' in keys:
+                page = request.form.get('page')
+            assert page <= len(products) / 20
+        except AssertionError:
+            return redirect('/')
     if products == []:
         products = Product.query.all()
 
@@ -218,6 +223,8 @@ def charge():
 
             # Amount in cent
             amount = int(float(request.form['amount']) * 100)
+            assert amount > 0
+
             cartid = request.form['cart']
 
             cart = Cart.query.filter_by(id=cartid).first()
@@ -253,7 +260,7 @@ def charge():
             db.session.add(order)
             db.session.commit()
             return render_template('charge.html', amount=amount)
-        except stripe.error.StripeError:
+        except (stripe.error.StripeError, AssertionError):
             db.session.rollback()
     return redirect(url_for('cart'))
 
@@ -343,8 +350,7 @@ def analitycs():
 
     return json.dumps(orders, cls=AlchemyEncoder)
 
-
-@app.route('/admin/login', methods=['GET', 'POST'])
+@admin_app.route('/admin_login', methods=['GET', 'POST'])
 def admin_login():
     if current_user.is_authenticated:
         return redirect('/')
@@ -354,7 +360,7 @@ def admin_login():
             admin = Admins.query.filter_by(name=form.username.data,password=form.password.data).first()
             if admin:
                 login_user(admin)
-                return redirect('/')
+                return redirect('/admin')
             return '<h1>Invalid username or password</h1>'
 
-        return render_template('login.html', form=form)
+        return render_template('admin_login.html', form=form)
