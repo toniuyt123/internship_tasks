@@ -99,7 +99,7 @@ class Role(db.Model):
 class AdminsRoles(db.Model):
     __table__ = db.Model.metadata.tables['adminsroles']
 
-class Admins(db.Model):
+class Admins(db.Model, UserMixin):
     __table__ = db.Model.metadata.tables['admins']
     roles = db.relationship('Role', secondary="adminsroles",
                             backref=db.backref('admins', lazy='dynamic'))
@@ -113,6 +113,7 @@ class AuthView(sqla.ModelView):
     can_export = True
 
     def is_accessible(self):
+        
         if current_user.is_authenticated:
             admin = Admins.query.filter_by(userid=current_user.id).first()
             if admin is None:

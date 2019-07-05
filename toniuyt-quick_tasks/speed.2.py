@@ -1,5 +1,6 @@
 from collections import defaultdict
 import networkx as nx
+import PyPDF2
 
 class RoadSpeed:
     g = {}
@@ -7,54 +8,104 @@ class RoadSpeed:
     def speed(self, n, roads):
         max_speed = max([r['speed'] for r in roads])
         min_speed = min([r['speed'] for r in roads])
-        res_min = min_speed
-        res_max = max_speed
-
+        paths = []
         two_way = []
         for r in roads:
             two_way.append(r)
             two_way.append({'road': (r['road'][1], r['road'][0]), 'speed': r['speed'] })
+        #print(two_way)
+        self.g = dict.fromkeys(range(1, n+1))
+        for i in range(1, n+1):
+            self.g[i] = []
+            for t in two_way:
+                if t['road'][0] == i:
+                    self.g[i].append(t['road'][1])
+        graph = nx.DiGraph()
+        graph.add_nodes_from(self.g.keys())
+        for k,v in self.g.items():
+            graph.add_edges_from(([(k,t) for t in v]))
+        print('pathfind start')
+        print(self.g)
+        for i in range(1, n+1):
+            for j in range(i+1, n+1):
+                paths.append(self.find_all_paths(i,j))
+        print('pathfinding end')
+        #print(paths)
+        summ = 0
+        for i in range(n):
+            summ += i
 
+        result = [[] for i in range(summ)]
+        index = 0
+        #print(len(result))
+        #print(len(paths))
+        for path in paths:
+        
+            dup_index = defaultdict(int)
+            for p in path:
+                temp = []
+                
+                for i in range(len(p) - 1):
+                    speeds = [s['speed'] for s in two_way if s['road'] == (p[i], p[i+1])]
+                    
+                    if len(speeds) > 1:
+                        temp.append(speeds[dup_index[str(p) + str((p[i], p[i+1]))] % len(speeds)])
+                        dup_index[str(p) + str((p[i], p[i+1]))] += 1
+                    else:
+                        temp.append(speeds[0])
+                #print(index)
+                result[index].append(temp)
+            index += 1
+        print('speeds found')
+        #print("result:")
+        #print(paths)
+        #print('result')
+        #print(result)
+        print("max speed " + str(max_speed))
+        print("min_seed " + str(min_speed))
+        res_min = min_speed
+        res_max = max_speed
         for i in range(min_speed, max_speed + 1):
             for j in reversed(range(i, max_speed + 1)):
-                self.g = dict.fromkeys(range(1, n+1))
-                for k in self.g.keys():
-                    self.g[k] = []
-                for r in two_way:
-                    if(r['speed'] >= i and r['speed'] <= j):
-                        #print(r['road'][0])
-                        self.g[r['road'][0]].append(r['road'][1])
-                        #print(self.g[r['road'][0]])
-                        #print('connections for')
-                        #print(r['road'][0])
-                        #print(g[r['road'][0]])
-                #print(self.g)    
-                #print(graph.nodes())
-                if(self.is_connected() and (j - i) < (res_max - res_min)):
+                big_found = True
+                for connections in result:
+                    found = False
+                    #print(connections)
+                    for p in connections:
+                        if i <= min(p) and j >= max(p):
+                            #print('one found')
+                            found = True
+                            break
+                    if not found:
+                        big_found = False
+                        break
+                if big_found and (j - i) < (res_max - res_min):
                     res_max = j
                     res_min = i 
+                    #print('current min max =' + str(res_max) + " " + str(res_min))
         print(res_max, res_min)
 
-    def is_connected(self, 
-                     vertices_encountered = None, 
-                     start_vertex=None):
-        """ determines if the graph is connected """
-        if vertices_encountered is None:
-            vertices_encountered = set()
-        gdict = self.g      
-        vertices = list(gdict.keys()) # "list" necessary in Python 3 
-        if not start_vertex:
-            # chosse a vertex from graph as a starting point
-            start_vertex = vertices[0]
-        vertices_encountered.add(start_vertex)
-        if len(vertices_encountered) != len(vertices):
-            for vertex in gdict[start_vertex]:
-                if vertex not in vertices_encountered:
-                    if self.is_connected(vertices_encountered, vertex):
-                        return True
-        else:
-            return True
-        return False
+        return 0
+
+    def find_all_paths(self, start_vertex, end_vertex, path=[]):
+        path = path + [start_vertex]
+        #graph = self.g
+        if start_vertex == end_vertex:
+            return [path]
+        if start_vertex not in self.g:
+            return []
+        paths = []
+        for vertex in self.g[start_vertex]:
+            #print(vertex)
+            if vertex not in path:
+                extended_paths = self.find_all_paths(vertex, 
+                                                        end_vertex, 
+                                                        path)
+                for p in extended_paths: 
+                    
+                    paths.append(p)
+        return paths
+
 
 if __name__ == "__main__":
     try:
@@ -2073,7 +2124,7 @@ if __name__ == "__main__":
             roads.append({'road': (row[0], row[1]), 'speed': row[2]})
         print('start')
         roadspeedcalc = RoadSpeed()
-        roadspeedcalc.speed(N, roads)
+        speeds = roadspeedcalc.speed(N, roads)
     except ValueError as e:
         print(e)
 

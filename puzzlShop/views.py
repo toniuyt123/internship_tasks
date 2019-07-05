@@ -4,7 +4,7 @@ import phonenumbers
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
-from puzzlShop import app, AlchemyEncoder, bootstrap, db, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
+from puzzlShop import app, Admins, AlchemyEncoder, bootstrap, db, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
 from operator import itemgetter
 import json
 import ast
@@ -18,6 +18,7 @@ from .forms import LoginForm, RegisterForm, AddressForm, EmailForm, PasswordForm
 @app.route('/')
 @app.route('/index')
 def index():
+    print(current_user.username)
     return render_template('index.html')
 
 
@@ -141,7 +142,9 @@ def get_products():
 
     tags = db.engine.execute('SELECT * FROM tags')
 
-    return render_template('/products.html', products=products, tags=tags, page=int(page))
+    deals = db.engine.execute('SELECT * FROM deals WHERE startdate <= NOW() AND enddate >= NOW()')
+
+    return render_template('/products.html', products=products, tags=tags, page=int(page), deals=deals)
 
 
 @app.route('/products/<id>', methods=['GET'])
@@ -334,8 +337,24 @@ def rate():
     else:
         return redirect(url_for('login'))
 
-@app.route('/analytics')
+@app.route('/analytics', methods=['POST'])
 def analitycs():
     orders = Order.query.all()
 
     return json.dumps(orders, cls=AlchemyEncoder)
+
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if current_user.is_authenticated:
+        return redirect('/')
+    else:
+        form = LoginForm()
+        if form.validate_on_submit():
+            admin = Admins.query.filter_by(name=form.username.data,password=form.password.data).first()
+            if admin:
+                login_user(admin)
+                return redirect('/')
+            return '<h1>Invalid username or password</h1>'
+
+        return render_template('login.html', form=form)

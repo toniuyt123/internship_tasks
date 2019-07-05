@@ -66,7 +66,17 @@
                             <a href="/products/{{product.id}}" id="name-heading"><h3 class="product-name">{{ product.name}}</h3></a>
                         </div>
                         <div class="col-lg-2">
-                            <p class="price text-info"> ${{ product.price }}</p>
+                            {% set ns = namespace(deal=false) %}
+                            {% for deal in deals: %}
+                                {% if product.id == deal.productid %}
+                                    <p class="price text-muted"><strike> <small>${{ product.price }}</small> </strike></p>
+                                    <p class="price text-danger"> ${{ deal.newprice }}</p>
+                                    {% set ns.deal = true %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if ns.deal is sameas false %}
+                                <p class="price text-info"> ${{ product.price }}</p>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="row">
