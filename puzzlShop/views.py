@@ -1,11 +1,10 @@
 from flask import Flask, render_template, redirect, url_for, request, flash, Blueprint
 from werkzeug.security import generate_password_hash, check_password_hash
 import phonenumbers
-from flask_login_multi.login_manager import LoginManager   
-from flask_login_multi import login_user, login_required, logout_user, current_user
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
-from puzzlShop import app, admin_app, Admins, AlchemyEncoder, bootstrap, db, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
+from puzzlShop import app, AlchemyEncoder, bootstrap, db, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
 from operator import itemgetter
 import json
 import ast
@@ -19,8 +18,11 @@ from .forms import LoginForm, RegisterForm, AddressForm, EmailForm, PasswordForm
 @app.route('/')
 @app.route('/index')
 def index():
-    print(current_user)
-    return render_template('index.html')
+    deals = db.engine.execute(""" SELECT p.*, d.newprice FROM Products p
+                                    INNER JOIN Deals d ON d.productid = p.id
+                                    WHERE d.startdate <= NOW() AND d.enddate >= NOW()
+                                    LIMIT 5;""")
+    return render_template('index.html', deals=deals)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -260,7 +262,8 @@ def charge():
             db.session.add(order)
             db.session.commit()
             return render_template('charge.html', amount=amount)
-        except (stripe.error.StripeError, AssertionError):
+        except (stripe.error.StripeError, AssertionError) as e:
+            print(e)
             db.session.rollback()
     return redirect(url_for('cart'))
 
@@ -343,24 +346,3 @@ def rate():
         return redirect("/products/%s" % (product.id,))
     else:
         return redirect(url_for('login'))
-
-@app.route('/analytics', methods=['POST'])
-def analitycs():
-    orders = Order.query.all()
-
-    return json.dumps(orders, cls=AlchemyEncoder)
-
-@admin_app.route('/admin_login', methods=['GET', 'POST'])
-def admin_login():
-    if current_user.is_authenticated:
-        return redirect('/')
-    else:
-        form = LoginForm()
-        if form.validate_on_submit():
-            admin = Admins.query.filter_by(name=form.username.data,password=form.password.data).first()
-            if admin:
-                login_user(admin)
-                return redirect('/admin')
-            return '<h1>Invalid username or password</h1>'
-
-        return render_template('admin_login.html', form=form)

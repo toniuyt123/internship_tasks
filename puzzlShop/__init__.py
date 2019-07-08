@@ -4,9 +4,7 @@ from flask import Flask, url_for, redirect, jsonify, Blueprint, render_template
 from flask_mail import Mail
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import UserMixin
-from flask_login_multi.login_manager import LoginManager   
-from flask_login_multi import current_user, login_user
+from flask_login import UserMixin, LoginManager, current_user, login_user
 from flask_admin import Admin, form,  expose, AdminIndexView, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib import sqla
@@ -30,16 +28,6 @@ db.Model.metadata.reflect(db.engine)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.blueprint_login_views = {  
-    'user':  "user.user_login",  
-    'admin': "admin.admin_login",  
-}  
-
-#login_manager.login_view = 'login'
-
-admin_app = Blueprint('adminn', __name__)  
-#user_app = Blueprint('user', __name__, url_prefix="/user")  
-app.register_blueprint(admin_app)
 
 stripe_keys = {
   'secret_key': os.environ['SECRET_KEY'],
@@ -49,15 +37,14 @@ stripe_keys = {
 stripe.api_key = stripe_keys['secret_key']
 
 @login_manager.user_loader
-def load_user(id, endpoint='admin'):
-    print(endpoint)
-    if endpoint == 'admin':
-        return Admins.query.get(id)
-    else:
-        return User.query.get(id)
+def get_user(id):
+    return User.query.get(int(id))
 
 class User(db.Model, UserMixin):
     __table__ = db.Model.metadata.tables['users']
+
+    def get_id(self):
+        return self.id
 
 class Tag(db.Model):
     __table__ = db.Model.metadata.tables['tags']
@@ -108,111 +95,9 @@ class Address(db.Model):
 
 class Rating(db.Model):
     __table__ = db.Model.metadata.tables['ratings']
-
-class Role(db.Model):
-    __table__ = db.Model.metadata.tables['roles']
-
-class AdminsRoles(db.Model):
-    __table__ = db.Model.metadata.tables['adminsroles']
-
-class Admins(db.Model):
-    __table__ = db.Model.metadata.tables['admins']
-    roles = db.relationship('Role', secondary="adminsroles",
-                            backref=db.backref('admins', lazy='dynamic'))
-
-    def get_id(self):
-        return self.id
-
-    def is_active(self):
-        return False
-
-
-
-file_path = op.join(op.dirname(__file__), 'static/img')
-
-class AuthView(sqla.ModelView):
-    can_delete = False
-    can_export = True
-
-    def is_accessible(self):
-        if current_user.is_authenticated:
-            admin = Admins.query.filter_by(userid=current_user.id).first()
-            if admin is None:
-                return False
-            return True
-            #return current_user.is_admin
-        return False
-
-    def inaccessible_callback(self, name):
-        return redirect(url_for('login'))
-
-class ProductView(AuthView):
-    def is_accessible(self):
-        if current_user.is_authenticated:
-            admin = Admins.query.filter_by(userid=current_user.id).first()
-            if admin is None:
-                return False
-            role = Role.query.filter_by(name='product_manager').first()
-            return role in admin.roles
-            #return current_user.is_admin
-        return False
-
-    def _list_thumbnail(self, view, model, name):
-        print(model.imagepath)
-        if not model.imagepath:
-            return ''
-
-        return Markup('<img src="%s">' % url_for('static', filename=form.thumbgen_filename('img/'+model.imagepath)))
-
-    column_formatters = {
-        'imagepath': _list_thumbnail
-    }
-
-    form_overrides = {
-        'imagepath': form.ImageUploadField
-    }
-
-    form_args = {
-        'imagepath': {
-            'label': 'Image',
-            'base_path': file_path,
-            'allow_overwrite': False,
-            'thumbnail_size': (100, 100, True)
-        }
-    }
-
-    column_hide_backrefs = False
-    column_list = ('id', 'name', 'price', 'description', 'imagepath', 'rating', 'difficulty', 'quantity', 'tags')
-    column_searchable_list = ['id', 'name', 'price', 'description', 'imagepath', 'rating', 'difficulty', 'quantity']
-
-class HomeView(AdminIndexView):
-    '''def is_accessible(self):
-        if current_user.is_authenticated:
-            admin = Admins.query.filter_by(userid=current_user.id).first()
-            if admin is None:
-                return False
-            return True
-            #return current_user.is_admin
-        return False
-
-    def inaccessible_callback(self, name):
-        return redirect(url_for('login'))'''
-    @expose('/', methods=['GET', 'POST'])
-    def index(self):
-        if current_user.is_authenticated:
-            return redirect('/')
-        else:
-            form = LoginForm()
-            if form.validate_on_submit():
-                admin = Admins.query.filter_by(name=form.username.data,password=form.password.data).first()
-                if admin:
-                    login_user(admin)
-                    return redirect('/admin')
-                return '<h1>Invalid username or password</h1>'
-
-            return render_template('admin_login.html', form=form)
-
         
+class Deals(db.Model):
+    __table__ = db.Model.metadata.tables['deals']
 
 class AlchemyEncoder(json.JSONEncoder):
 
@@ -232,28 +117,6 @@ class AlchemyEncoder(json.JSONEncoder):
 
         return json.JSONEncoder.default(self, obj)
 
-class AnalyticsView(BaseView):
-    @expose('/')
-    def index(self):
-        try:
-            orders = Order.query.all()
-            assert len(orders) >= 0
-            users = User.query.all()
-            active_users = [user for user in users if user.is_active]
-            little_products = [product for product in Product.query.all() if product.quantity < 5]
-
-            return self.render('analytics_index.html', orders=orders, active_users=len(active_users), little_products=little_products)
-        except:
-            return redirect('/admin')
-
-
-app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
-admin = Admin(app, name='PuzzlShop', template_mode='bootstrap3', index_view=HomeView(name='Home'))
-admin.add_view(AuthView(User, db.session))
-admin.add_view(ProductView(Product, db.session))
-admin.add_view(AuthView(Address, db.session))
-admin.add_view(AnalyticsView(name='Analytics', endpoint='analytics'))
-admin.add_view(AuthView(Tag, db.session))
 app.jinja_env.add_extension('jinja2.ext.loopcontrols')
 
 import puzzlShop.views

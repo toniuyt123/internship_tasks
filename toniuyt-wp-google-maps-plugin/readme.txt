@@ -1,1 +1,0 @@
-A wordpress plugin for embeding googole maps and dispalying, filtering markers on the map.

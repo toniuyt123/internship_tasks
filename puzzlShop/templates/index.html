@@ -1,5 +1,63 @@
 {% extends 'base.html' %}
 
+{% block styles %}
+{{super()}}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-slider.css') }}" />
+<script src="{{ url_for('static', filename='js/ism-2.2.min.js') }}"></script>
+{% endblock %}
+
 {% block content %}
-  <h1>Welcome</h1>
+<div class='row'>
+  <div class="col-lg-10">
+    <div class="ism-slider" id="my-slider">
+      <ol>
+        <li>
+          <img src="{{ url_for('static', filename='img/slides/flower-729514_1280.jpg') }}">
+          <div class="ism-caption ism-caption-0">My slide caption text</div>
+        </li>
+        <li>
+          <img src="{{ url_for('static', filename='img/slides/beautiful-701678_1280.jpg') }}">
+          <div class="ism-caption ism-caption-0">My slide caption text</div>
+        </li>
+        <li>
+          <img src="{{ url_for('static', filename='img/slides/summer-192179_1280.jpg') }}">
+          <div class="ism-caption ism-caption-0">My slide caption text</div>
+        </li>
+        <li>
+          <img src="{{ url_for('static', filename='img/slides/city-690332_1280.jpg') }}">
+          <div class="ism-caption ism-caption-0">My slide caption text</div>
+        </li>
+      </ol>
+    </div>
+  </div>
+  <div class="col-lg-2">
+    <h1>ad space</h1>
+  </div>
+</div>
+<hr>
+<div class="row">
+  <div class="col-lg-2">
+    <h1>ad space</h1>
+  </div>
+  <div class="col-lg-10">
+    <div class='row'>
+      {% for deal in deals %}
+
+      <div class="col-lg-2 small-product-container">
+          <img class="img-thumbnail" src="{{deal.imagepath}}" width="100%">
+          <h3 class="small-title">{{deal.name}}</h3>
+          <p class="price text-muted float-left"><strike> <small>${{ deal.price }}</small> </strike></p>
+          <p class="price text-danger"> ${{ deal.newprice }}</p>
+          <form action="/cart/add" method='POST'>
+            <input type="hidden" value='{{deal.id}}' name='product'>
+            <button name='product' type="submit" class="btn btn-secondary btn-lg small-cart">Add to
+                cart</button>
+          </form>
+      </div>
+
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% include 'footer.html' %}
 {% endblock %}

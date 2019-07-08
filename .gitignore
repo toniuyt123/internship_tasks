@@ -1,6 +1,7 @@
 ekatte/ekatte
 ekatte/database.ini
 py3env
+py3admin
 *.ini
 __pycache__
 

@@ -190,11 +190,46 @@ p {
     font-size: 1.2em;
 }
 
-.scrollbar {
-    position: relative;
-    height: 200px;
-    overflow: auto;
+.small-product-container {
+    border-radius:3px;
+    border-style: solid;
+    border-width: 2px;
+    border-color: #5bc0de;
+    padding: 5px;
+    margin-right: 15px;
 }
-.table-wrapper-scroll-y {
-    display: block;
+
+.small-cart {
+    bottom: 4px;
 }
+
+.small-title {
+    margin-top: 5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    height: 32px;
+    line-height: 16px;     /* fallback */
+    max-height: 32px;      /* fallback */
+    -webkit-line-clamp: 2; /* number of lines to show */
+    -webkit-box-orient: vertical;
+ }
+
+ footer {
+     margin-top: 30px;
+     color: white;
+    background-color: #5bc0de;
+ }
+
+ .footer-copyright {
+     background-color: #397c91
+ }
+
+ .text-uppercase {
+     font-size: 2em;
+ }
+
+ a {
+     color: white;
+     text-decoration: none;
+ }
