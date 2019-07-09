@@ -36,5 +36,16 @@ def generate_tags():
     cur.close()
     conn.commit()
 
+def generate_ratings():
+    params = config()
+    conn = psycopg2.connect(**params)
+    cur = conn.cursor()
+
+    for i in range(100, 50000):
+        cur.execute(""" UPDATE products SET rating = %s WHERE id = %s""", (random.random() * 6, i))
+
+    cur.close()
+    conn.commit()
+
 if __name__ == "__main__":
-    generate_tags()
+    generate_ratings()

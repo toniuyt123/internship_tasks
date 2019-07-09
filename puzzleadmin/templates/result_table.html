@@ -1,0 +1,22 @@
+<table class="table table-bordered table-striped mb-0">
+        <thead>
+            {% for col in columns %}
+                <th> {{ col }}</th>
+            {% endfor %}
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                {% for attr in order %}
+                    {% if attr is number %}
+                    <td class="price">
+                    {% else %}
+                    <td>
+                    {% endif %}
+                        {{attr}}
+                    </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>

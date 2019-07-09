@@ -1,0 +1,19 @@
+{% extends 'analytics_index.html' %}
+{% block body %}
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+<script type="text/javascript" src="{{url_for('static', filename='js/analytics.js')}}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')}}">
+<script type=text/javascript src="{{ url_for('static', filename='js/jquery.js') }}"></script>
+<form method='POST'>
+    {% for key in keys %}
+    <label class='form-label'>{{ key }} : </label>
+    {{ form|attr(key)() }}
+    <br>
+    {% endfor %}
+    <br>
+    <button class="btn btn-lg btn-primary" type="submit" method="POST">Filter</button>
+</form>
+
+{% include 'result_table.html' %}
+{% endblock %}

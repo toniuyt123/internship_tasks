@@ -1,13 +1,13 @@
 import os
 import os.path as op
-from flask import Flask, url_for, redirect, jsonify, Blueprint, render_template
+from flask import Flask, url_for, redirect, jsonify, Blueprint, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager,current_user, login_user
 from flask_admin import Admin, form,  expose, AdminIndexView, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib import sqla
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, ValidationError
+from wtforms import StringField, PasswordField, ValidationError, SelectField, DateField
 from wtforms.validators import InputRequired, Length
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from datetime import datetime
@@ -142,7 +142,13 @@ class AlchemyEncoder(json.JSONEncoder):
 
         return json.JSONEncoder.default(self, obj)
 
+class ReportForm(FlaskForm):
+    name = StringField('static field')
+
 class AnalyticsView(BaseView):
+    ignore_columns = ['description', 'imagepath', 'name', 'difficulty']
+    interval_columns = ['price', 'rating', 'difficulty', 'quantity']
+
     def is_accessible(self):
         roles = [r.name for r in current_user.roles]
         return 'sales_manager' in roles or 'master' in roles
@@ -150,19 +156,106 @@ class AnalyticsView(BaseView):
     def inaccessible_callback(self, name):
         return redirect(url_for('login'))
 
-    @expose('/')
-    def index(self):
-        try:
-            orders = Order.query.all()
-            assert len(orders) >= 0
-            users = User.query.all()
-            active_users = [user for user in users if user.is_active]
-            little_products = [product for product in Product.query.all() if product.quantity < 5]
+    def create_form(self, table):
+        columns = table.c
+        keys = []
+        for c in columns:
+            if c.name[-2:] == 'id' or c.name in self.ignore_columns:
+                continue
+            
+            if "TIMESTAMP" in str(c.type):
+                key = c.name+'_start'
+                keys.append(key)
+                setattr(ReportForm, key, DateField(key, format='%d-%m-%Y'))
+                key = c.name+'_end'
+                keys.append(key)
+                setattr(ReportForm, key, DateField(key, format='%d-%m-%Y'))
+                key = c.name+'_group'
+                choices = [('', 'None'), ('year', 'by years'), ('month', 'by months'), 
+                            ('week', 'by weeks'), ('day', 'by days'), ('hour', 'by hour')]
+                keys.append(key)
+                setattr(ReportForm, key, SelectField(key, choices = choices))
+            elif c.name in self.interval_columns:
+                key = c.name+'_start'
+                keys.append(key)
+                setattr(ReportForm, key, StringField(key))
+                key = c.name+'_end'
+                keys.append(key)
+                setattr(ReportForm, key, StringField(key))
+            elif str(c.type) == 'status':
+                keys.append(c.name)
+                setattr(ReportForm, c.name, SelectField(key, choices=[('', 'None'), ('ordered', 'ordered'), ('shipped', 'shipped'), ('delivered', 'delivered')]))
+            else:   
+                keys.append(c.name)
+                setattr(ReportForm, c.name, StringField(c.name))
+        form = ReportForm()
+        return form, keys
 
-            return self.render('analytics_index.html', orders=orders, active_users=len(active_users), little_products=little_products)
+    @expose('/products', methods=['GET', 'POST'])
+    def products_analytics(self):
+        md = db.MetaData()
+        table = db.Table('products', md, autoload=True, autoload_with=db.engine)
+        form, keys = self.create_form(table)
+
+        products = []
+        if request.method == 'POST':
+            values = {}
+            for field in form:
+                if '_start' in field.name:
+                    values[field.name] = field.data if field.data is not '' else 0
+                elif '_end' in field.name:
+                    values[field.name] = field.data if field.data is not '' else 9999
+
+            result = db.engine.execute("""SELECT  id, price, rating, quantity FROM Products
+                                        WHERE price >= %s AND price <= %s AND rating >= %s AND rating <= %s AND
+                                        quantity >= %s AND quantity <= %s"""
+                                          , (values['price_start'], values['price_end'], values['rating_start'],
+                                          values['rating_end'], values['quantity_start'], values['quantity_end']))
+        else:
+            result = {}
+
+        for row in result:
+            products.append(row)
+
+        return self.render('product_analytics.html', orders=products, form=form, keys=keys, columns=result.keys())
+
+    @expose('/orders', methods=['GET', 'POST'])
+    def orders_analytics(self):
+        try:
+            md = db.MetaData()
+            table = db.Table('orders', md, autoload=True, autoload_with=db.engine)
+            form, keys = self.create_form(table)
+            
+            orders=[]
+            if request.method == 'POST':
+                startdate = form.orderedat_start.data if form.orderedat_start.data is not None else '01-01-0001'
+                enddate = form.orderedat_end.data if form.orderedat_end.data is not None else datetime.now().strftime("%d-%m-%Y")
+                enddate = datetime.combine(enddate, datetime.max.time())
+                
+                status = form.status.data if form.status.data is not '' else 'ordered,shipped,delivered'
+
+                if form.orderedat_group.data == '':
+                    result = db.engine.execute(""" SELECT o.orderedat AS orderedat, o.orderammount AS sum, o.status AS status FROM Orders o
+                                    WHERE %s <= o.orderedat AND %s >= o.orderedat AND position(o.status::TEXT in %s) > 0
+                                    """, (startdate, enddate, status))
+                else:
+                    result = db.engine.execute(""" SELECT date_trunc(%s, o.orderedat) AS orderedat, SUM(o.orderammount) AS sum, MAX(o.status) AS status FROM Orders o
+                                    WHERE %s <= o.orderedat AND %s >= o.orderedat AND position(o.status::TEXT in %s) > 0
+                                    GROUP BY 1 """, (form.orderedat_group.data, startdate, enddate, status))
+            else:
+                result = db.engine.execute("""SELECT orderedat, orderammount AS sum, status FROM Orders o """)
+
+            for row in result:
+                orders.append(row)
+            assert len(orders) >= 0
+            return self.render('orders_analytics.html', orders=orders, form=form, keys=keys, columns=result.keys())
         except AssertionError as e:
             print(e)
             return redirect('/admin')
+
+    @expose('/', methods=['GET'])
+    def index(self):
+        return self.render('analytics_index.html')
 
 
 app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'

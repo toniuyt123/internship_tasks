@@ -17,7 +17,7 @@
                 {% for tag in tags %}
                 <div class="tag-filters">
                     <label for="tag-{{tag.name}}"> <input type="checkbox" id="tag-{{tag.name}}" value="{{tag.name}}"
-                            name="tags">
+                            name="tags" onclick='this.form.submit()' {% if tag.name in selected_tags %} checked {%endif%}>
                         {{tag.name}}</label>
                 </div>
                 {% endfor %}
@@ -25,12 +25,12 @@
                 <div class="row price-range">
                     <div class="col-lg-5">
                         <input type="text" name='min' id='min-ammount' class='form-cotrol' style="width:100%"
-                            placeholder='0' />
+                            placeholder='0' value="{{prices_range[0]}}"/>
                     </div>
                     <h2 class="float-left">-</h2>
                     <div class="col-lg-5">
                         <input type="text" name='max' id='max-ammount' class='form-cotrol' style="width:100%"
-                            placeholder='1000' />
+                            placeholder='1000' value="{{prices_range[1]}}"/>
                     </div>
                 </div>
 
@@ -42,6 +42,11 @@
             <div class="row" id="toolbar">
                 <div class="col-lg-3">
                     <form method='POST' action='/products'>
+                        {% for tag in selected_tags %}
+                        <input type='hidden' name='tags' value='{{tag}}'>
+                        {% endfor %}
+                        <input type='hidden' name='min' value="{{prices_range[0]}}"/>
+                        <input type='hidden' name='max' value="{{prices_range[1]}}"/>
                         <select name='sort_by' class="form-control form-control-lg" onchange='this.form.submit()'>
                             <option value="" selected disabled hidden>Sort by</option>
                             <option value="{'param':'price','desc':'False'}">Price acending</option>

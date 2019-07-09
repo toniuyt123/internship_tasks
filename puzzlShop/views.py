@@ -32,7 +32,7 @@ def register():
         if request.method == 'POST' and form.validate():
             hashed_password = generate_password_hash(
                 form.password.data, method='sha256')
-            user = User(username=form.username.data,
+            user = User(username=form.username.data, phone=form.phone.data, country=form.country.data,
                         email=form.email.data, passwordhash=hashed_password)
             db.session.add(user)
             db.session.commit()
@@ -104,6 +104,7 @@ def get_products():
     keys = []
     page = 1
     min_price, max_price = 0, 1000
+    selected_tags = []
     if request.method == 'POST':
         try:
             keys = list(request.form.keys())
@@ -117,7 +118,7 @@ def get_products():
             tags = [t.name for t in Tag.query.all()]
             if 'tags' in keys:
                 tags = request.form.getlist('tags')
-
+                selected_tags = request.form.getlist('tags')
             req_min, req_max = request.form.get('min'), request.form.get('max')
             if req_min != None and req_min != '':
                 print(request.form.get('min'))
@@ -130,11 +131,12 @@ def get_products():
                             WHERE p.price >= %s AND p.price <= %s
                             GROUP BY p.id, p.name, p.description, p.price, p.difficulty, p.rating, p.quantity
                             HAVING \'%s\' = ANY(array_agg(t.name))''' % (min_price, max_price, tags[0])) + ''.join((' OR \'%s\' = ANY(array_agg(t.name))' % t for t in tags[1:]))
+            print(statement)
             result = db.engine.execute(statement)
             products = [dict(row.items()) for row in result]
             if 'page' in keys:
                 page = request.form.get('page')
-            assert page <= len(products) / 20
+            assert int(page) <= len(products) / 20
         except AssertionError:
             return redirect('/')
     if products == []:
@@ -148,10 +150,11 @@ def get_products():
             params['param']), reverse=desc)
 
     tags = db.engine.execute('SELECT * FROM tags')
-
+    
     deals = db.engine.execute('SELECT * FROM deals WHERE startdate <= NOW() AND enddate >= NOW()')
 
-    return render_template('/products.html', products=products, tags=tags, page=int(page), deals=deals)
+    return render_template('/products.html', products=products, tags=tags, page=int(page), 
+                        deals=deals, selected_tags=selected_tags, prices_range=(min_price, max_price))
 
 
 @app.route('/products/<id>', methods=['GET'])
