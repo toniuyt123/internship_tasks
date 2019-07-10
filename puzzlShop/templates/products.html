@@ -60,7 +60,7 @@
             {% if products|length == 0 %}
                 <p>No products found.</p>
             {% endif %}
-            {% for product in products[20 * (page - 1):20 * page]: %}
+            {% for product in products: %}
             <div class="row product-container well" data-price='{{product.price}}'>
                 <div class="col-lg-2 col-sm-2 col-xs-2">
                     <a href="/products/{{product.id}}"><img src="{{ product.imagepath }}" class="img-thumbnail rounded product-image"/></a>
@@ -106,7 +106,17 @@
             </div>
             {% endfor %}
             <form action="/products" method="POST">
-                {% set pages = (products|length / 20)|int %}
+                {% for i in range(page-5 if page-5 > 0 else 1, page+10) %}
+                    {% if i == page %}
+                        <button value="{{i}}" name="page" type="submit"
+                            class="page-button btn btn-info float-left">{{ i }}</button>
+                    {% else %}
+                        <button value="{{i}}" name="page" type="submit"
+                            class="page-button btn btn-outline-info float-left">{{ i }}</button>
+                    {% endif %}
+                {% endfor %}
+
+                <!--- {% set pages = (products|length / 20)|int %}
 
                 {% if page > 10 %}
                     <button value=" 1 " name="page" type="submit"
@@ -136,7 +146,7 @@
                                 class="page-button btn btn-outline-info float-left">{{ i+1 }}</button>
                         {% endif %}
                     {% endfor %}
-                {% endif %}
+                {% endif %}-->
             </form>
         </div>
     </div>

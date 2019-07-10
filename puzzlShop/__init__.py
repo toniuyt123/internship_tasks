@@ -125,4 +125,4 @@ app.jinja_env.add_extension('jinja2.ext.loopcontrols')
 import puzzlShop.views
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True, threads=True)

@@ -10,7 +10,7 @@ import json
 import ast
 import csv
 import os
-from multiprocessing import process
+import signal
 import time
 from datetime import datetime
 import stripe
@@ -133,14 +133,20 @@ def get_products():
                 query = request.form['search_query']
                 result = db.engine.execute('''SELECT * FROM products 
                                 WHERE to_tsvector(name) @@ to_tsquery(%s) OR
-                                    to_tsvector(description) @@ to_tsquery(%s)''', (query, query))
+                                    to_tsvector(description) @@ to_tsquery(%s)
+                                LIMIT 20''', (query, query))
+
+            if 'page' in keys:
+                page = int(request.form.get('page'))
+            assert page <= 2000
+
             tags = [t.name for t in Tag.query.all()]
             if 'tags' in keys:
                 tags = request.form.getlist('tags')
                 selected_tags = request.form.getlist('tags')
             req_min, req_max = request.form.get('min'), request.form.get('max')
+
             if req_min != None and req_min != '':
-                print(request.form.get('min'))
                 min_price = int(req_min)
             if req_max != None and req_max != '':
                 max_price = int(req_max)
@@ -149,17 +155,20 @@ def get_products():
                             LEFT JOIN tags t ON pt.tagid = t.id
                             WHERE p.price >= %s AND p.price <= %s
                             GROUP BY p.id, p.name, p.description, p.price, p.difficulty, p.rating, p.quantity
-                            HAVING \'%s\' = ANY(array_agg(t.name))''' % (min_price, max_price, tags[0])) + ''.join((' OR \'%s\' = ANY(array_agg(t.name))' % t for t in tags[1:]))
-            print(statement)
+                            HAVING \'%s\' = ANY(array_agg(t.name))
+                            ''' % (min_price, max_price, tags[0])) + ''.join((' OR \'%s\' = ANY(array_agg(t.name)) ' % t for t in tags[1:])) + ('''
+                                LIMIT 20 OFFSET %s ''' % (20*(page-1)))
+            #print(statement)
             result = db.engine.execute(statement)
             products = [dict(row.items()) for row in result]
-            if 'page' in keys:
-                page = request.form.get('page')
-            assert int(page) <= len(products) / 20
+            #print(products)
         except AssertionError:
             return redirect('/')
     if products == []:
-        products = Product.query.all()
+        result = db.engine.execute(''' SELECT * FROM Products LIMIT 20''')
+        products = [dict(row.items()) for row in result]
+
+    
 
     if 'sort_by' in keys:
         params = json.loads(request.form.get('sort_by').replace("'", "\""))
@@ -235,11 +244,11 @@ def get_cart(id):
         db.session.commit()
     return cart
 
-
 @app.route('/charge', methods=['POST', 'GET'])
 def charge():
     form = AddressForm()
     if form.validate_on_submit():
+
         try:
             address = Address(address=form.street.data, city=form.city.data,
                             state=form.state.data, country=form.country.data, zip=form.zipCode.data)
@@ -281,6 +290,7 @@ def charge():
             ), addressid=address.id, orderammount=amount / 100)
             db.session.add(order)
             db.session.commit()
+
             return render_template('charge.html', amount=amount)
         except (Exception, stripe.error.StripeError, AssertionError) as e:
             print(e)

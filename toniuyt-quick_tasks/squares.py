@@ -1,13 +1,16 @@
 import math
+from copy import deepcopy
 
 def squares(grid, symbols):
     side = len(symbols)
     small_side = int(math.sqrt(side))
 
     solved = False
-
+    extreme = False
     while not solved:
         solved = True
+        found = False
+
         for i in range(side):
             for j in range(side):
                 if grid[i][j] == '0':
@@ -16,30 +19,44 @@ def squares(grid, symbols):
                     symbols_left = symbols[:]
                     for c in range(side):
                         #check row
-                        col_symbol = grid[i][c]
-                        if col_symbol != '0' and col_symbol in symbols_left:
-                            symbols_left.remove(col_symbol)
-
+                        symbols_left = check_symbol(symbols_left, grid[i][c])
                         #check col
-                        row_symbol = grid[c][j]
-                        if row_symbol != '0' and row_symbol in symbols_left:
-                            symbols_left.remove(row_symbol)
+                        symbols_left = check_symbol(symbols_left, grid[c][j])
 
-                    #print(symbols_left)
                     #check small box
                     box_index = (int(i / small_side), int(j / small_side))
                     for row in range(small_side * box_index[0], small_side * box_index[0] + small_side):
                         for col in range(small_side * box_index[1], small_side * box_index[1] + small_side):
-                            symbol = grid[row][col]
-                            if symbol != '0' and symbol in symbols_left:
-                                symbols_left.remove(symbol)
+                            symbols_left = check_symbol(symbols_left, grid[row][col])
 
-                    #print(i,j)
-                    print(symbols_left)
+
                     if len(symbols_left) == 1:
+                        found = True
                         grid[i][j] = symbols_left[0]
 
+
+                    if len(symbols_left) == 2 and extreme:
+                        secondary = deepcopy(grid)
+                        secondary[i][j] = symbols_left[1]
+                        secondary = squares(secondary, symbols)
+                        if not secondary:
+                            grid[i][j] = symbols_left[0]
+                        else:
+                            return secondary
+                        
+
+                    if len(symbols_left) == 0:
+                        return False
+
+        if not found:
+            extreme = True
+
     return grid
+
+def check_symbol(symbols_left, symbol):
+    if symbol != '0' and symbol in symbols_left:
+        symbols_left.remove(symbol)
+    return symbols_left
 
 if __name__ == '__main__':
     try:
@@ -70,23 +87,3 @@ if __name__ == '__main__':
         
     except ValueError as e:
         print(e)
-
-'''
-2
-0 0 # $
-0 0 0 0
-* 0 0 0
-0 # 0 5
-
-
-3 
-B Y 0 0 P 0 0 0 0
-L 0 0 R E B 0 0 0
-0 E W 0 0 0 0 L 0 
-W 0 0 0 L 0 0 0 Y 
-G 0 0 W 0 Y 0 0 R 
-P 0 0 0 O 0 0 0 L 
-0 L 0 0 0 0 O W 0 
-0 0 0 G R E 0 0 B
-0 0 0 0 W 0 0 P E
-'''
