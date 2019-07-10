@@ -4,16 +4,20 @@ import phonenumbers
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from wtforms.validators import InputRequired, Email, Length, EqualTo
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
-from puzzlShop import app, AlchemyEncoder, bootstrap, db, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
+from puzzlShop import app, AlchemyEncoder, bootstrap, db, socketio, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
 from operator import itemgetter
 import json
 import ast
 import csv
 import os
+from multiprocessing import process
+import time
 from datetime import datetime
 import stripe
 from .forms import LoginForm, RegisterForm, AddressForm, EmailForm, PasswordForm
 
+
+active_users = 0
 
 @app.route('/')
 @app.route('/index')
@@ -22,7 +26,8 @@ def index():
                                     INNER JOIN Deals d ON d.productid = p.id
                                     WHERE d.startdate <= NOW() AND d.enddate >= NOW()
                                     LIMIT 5;""")
-    return render_template('index.html', deals=deals)
+    global active_users
+    return render_template('index.html', deals=deals, active_users=active_users)
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -44,6 +49,10 @@ def register():
             send_email(user.email, subject, html)
 
             login_user(user)
+            global active_users
+            active_users += 1
+            socketio.emit('user login/logout', {'data': active_users})
+
 
             return redirect(url_for('login'))
         return render_template('register.html', form=form)
@@ -82,6 +91,11 @@ def login():
             if user:
                 if check_password_hash(user.passwordhash, form.password.data):
                     login_user(user, remember=form.remember.data)
+
+                    global active_users
+                    active_users += 1
+                    socketio.emit('user login/logout', {'data': active_users})
+
                     return redirect('/')
             return '<h1>Invalid username or password</h1>'
 
@@ -95,6 +109,11 @@ def logout():
     db.session.add(user)
     db.session.commit()
     logout_user()
+
+    global active_users
+    active_users -= 1
+    socketio.emit('user login/logout', {'data': active_users})
+
     return redirect('/')
 
 
@@ -229,18 +248,17 @@ def charge():
             # Amount in cent
             amount = int(float(request.form['amount']) * 100)
             assert amount > 0
-
             cartid = request.form['cart']
 
             cart = Cart.query.filter_by(id=cartid).first()
 
-            result = db.engine.execute(""" SELECT SUM(p.price) FROM cartitems c
+            result = db.engine.execute(""" SELECT p.price, c.quantity FROM cartitems c
                                                 LEFT JOIN products p ON p.id = c.productid
-                                                WHERE c.cartid = %s
-                                                GROUP BY c.cartid""", (cartid,))
-            real_amount = -1
+                                                WHERE c.cartid = %s""", (cartid,))
+            real_amount = 0
             for row in result:
-                real_amount = int(row[0]*100)
+                real_amount += int(row[0]*100)*int(row[1])
+
             if amount != real_amount:
                 return redirect(url_for('cart'))
 
@@ -259,13 +277,12 @@ def charge():
                 currency='usd',
                 description='Flask Charge'
             )
-
             order = Order(userid=user.id, cartid=cartid, orderedat=datetime.now(
             ), addressid=address.id, orderammount=amount / 100)
             db.session.add(order)
             db.session.commit()
             return render_template('charge.html', amount=amount)
-        except (stripe.error.StripeError, AssertionError) as e:
+        except (Exception, stripe.error.StripeError, AssertionError) as e:
             print(e)
             db.session.rollback()
     return redirect(url_for('cart'))
@@ -349,3 +366,4 @@ def rate():
         return redirect("/products/%s" % (product.id,))
     else:
         return redirect(url_for('login'))
+

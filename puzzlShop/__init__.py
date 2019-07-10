@@ -8,6 +8,7 @@ from flask_login import UserMixin, LoginManager, current_user, login_user
 from flask_admin import Admin, form,  expose, AdminIndexView, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib import sqla
+from flask_socketio import SocketIO
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from jinja2 import Markup
 from jinja2.ext import loopcontrols
@@ -35,6 +36,8 @@ stripe_keys = {
 }
 
 stripe.api_key = stripe_keys['secret_key']
+
+socketio = SocketIO(app)
 
 @login_manager.user_loader
 def get_user(id):
@@ -120,3 +123,6 @@ class AlchemyEncoder(json.JSONEncoder):
 app.jinja_env.add_extension('jinja2.ext.loopcontrols')
 
 import puzzlShop.views
+
+if __name__ == '__main__':
+    socketio.run(app, debug=True)
