@@ -1,22 +1,15 @@
 import os
-import os.path as op
-from flask import Flask, url_for, redirect, jsonify, Blueprint, render_template
+from flask import Flask, abort, render_template
 from flask_mail import Mail
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import UserMixin, LoginManager, current_user, login_user
-from flask_admin import Admin, form,  expose, AdminIndexView, BaseView, expose
-from flask_admin.contrib.sqla import ModelView
-from flask_admin.contrib import sqla
+from flask_login import LoginManager, UserMixin
 from flask_socketio import SocketIO
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from jinja2 import Markup
-from jinja2.ext import loopcontrols
 from datetime import datetime
-from .forms import LoginForm
 import stripe
-import csv
 import json
+import logging
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object("puzzlShop.config.BaseConfig")
@@ -122,7 +115,39 @@ class AlchemyEncoder(json.JSONEncoder):
 
 app.jinja_env.add_extension('jinja2.ext.loopcontrols')
 
+
+@db.event.listens_for(db.engine, "handle_error")
+def handle_exception(context):
+    abort(500)
+
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(error):
+    db.session.rollback()
+    return render_template('500.html'), 500
+
+logging.basicConfig()
+logger = logging.getLogger("myapp.sqltime")
+logger.setLevel(logging.DEBUG)
+
+@event.listens_for(Engine, "before_cursor_execute")
+def before_cursor_execute(conn, cursor, statement,
+                        parameters, context, executemany):
+    conn.info.setdefault('query_start_time', []).append(time.time())
+    logger.debug("Start Query: %s", statement)
+
+@event.listens_for(Engine, "after_cursor_execute")
+def after_cursor_execute(conn, cursor, statement,
+                        parameters, context, executemany):
+    total = time.time() - conn.info['query_start_time'].pop(-1)
+    logger.debug("Query Complete!")
+    logger.debug("Total Time: %f", total)
+
 import puzzlShop.views
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, threads=True)
+    socketio.run(app, debug=True, threaded=True)

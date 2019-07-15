@@ -1,21 +1,14 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, Blueprint
+from flask import flash, redirect, render_template, request, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
-import phonenumbers
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from wtforms.validators import InputRequired, Email, Length, EqualTo
+from flask_login import current_user, login_required, login_user, logout_user
 from puzzlShop.email_token import generate_confirmation_token, confirm_token, send_email
-from puzzlShop import app, AlchemyEncoder, bootstrap, db, socketio, Tag, login_manager, Rating, User, Product, Cart, CartItem, stripe_keys, Order, Address
+from puzzlShop import Address, Cart, CartItem, Order, Product, Rating, Tag, User, app, db, socketio, stripe_keys
 from operator import itemgetter
 import json
-import ast
-import csv
-import os
-import signal
-import time
 from datetime import datetime
 import stripe
 from .forms import LoginForm, RegisterForm, AddressForm, EmailForm, PasswordForm
-
+import hashlib
 
 active_users = 0
 
@@ -26,9 +19,9 @@ def index():
                                     INNER JOIN Deals d ON d.productid = p.id
                                     WHERE d.startdate <= NOW() AND d.enddate >= NOW()
                                     LIMIT 5;""")
+
     global active_users
     return render_template('index.html', deals=deals, active_users=active_users)
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -88,6 +81,7 @@ def login():
         form = LoginForm()
         if form.validate_on_submit():
             user = User.query.filter_by(username=form.username.data).first()
+            
             if user:
                 if check_password_hash(user.passwordhash, form.password.data):
                     login_user(user, remember=form.remember.data)
@@ -95,10 +89,8 @@ def login():
                     global active_users
                     active_users += 1
                     socketio.emit('user login/logout', {'data': active_users})
-
                     return redirect('/')
             return '<h1>Invalid username or password</h1>'
-
         return render_template('login.html', form=form)
 
 
@@ -158,14 +150,12 @@ def get_products():
                             HAVING \'%s\' = ANY(array_agg(t.name))
                             ''' % (min_price, max_price, tags[0])) + ''.join((' OR \'%s\' = ANY(array_agg(t.name)) ' % t for t in tags[1:])) + ('''
                                 LIMIT 20 OFFSET %s ''' % (20*(page-1)))
-            #print(statement)
             result = db.engine.execute(statement)
             products = [dict(row.items()) for row in result]
-            #print(products)
         except AssertionError:
             return redirect('/')
     if products == []:
-        result = db.engine.execute(''' SELECT * FROM Products LIMIT 20''')
+        result = db.engine.execute(''' SELECT * FROM Products ORDER BY price LIMIT 20''')
         products = [dict(row.items()) for row in result]
 
     
@@ -173,7 +163,6 @@ def get_products():
     if 'sort_by' in keys:
         params = json.loads(request.form.get('sort_by').replace("'", "\""))
         desc = True if params['desc'] == 'True' else False
-        #products.sort(key=lambda x: getattr(x, params['param']), reverse=desc)
         products = sorted(products, key=itemgetter(
             params['param']), reverse=desc)
 
@@ -275,6 +264,10 @@ def charge():
             db.session.add(cart)
             user = User.query.filter_by(id=cart.userid).first_or_404()
 
+            key = hashlib.sha1()
+            key.update(user.email)
+            
+
             customer = stripe.Customer.create(
                 email=user.email,
                 source=request.form['stripeToken']
@@ -284,8 +277,10 @@ def charge():
                 customer=customer.id,
                 amount=amount,
                 currency='usd',
-                description='Flask Charge'
+                description='Flask Charge',
+                idempotency_key=key.hexdigest()
             )
+
             order = Order(userid=user.id, cartid=cartid, orderedat=datetime.now(
             ), addressid=address.id, orderammount=amount / 100)
             db.session.add(order)

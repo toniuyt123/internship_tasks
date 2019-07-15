@@ -233,3 +233,7 @@ p {
      color: white;
      text-decoration: none;
  }
+
+ #deal-container {
+     padding-left: 15px;
+ }

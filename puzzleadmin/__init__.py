@@ -1,13 +1,11 @@
-import os
 import os.path as op
-from flask import Flask, url_for, redirect, jsonify, Blueprint, render_template, request
+from flask import Flask, redirect, render_template, request, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager,current_user, login_user
 from flask_admin import Admin, form,  expose, AdminIndexView, BaseView, expose
-from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib import sqla
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, ValidationError, SelectField, DateField
+from wtforms import DateField, PasswordField, SelectField, StringField
 from wtforms.validators import InputRequired, Length
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from datetime import datetime

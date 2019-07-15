@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class='row'>
-  <div class="col-lg-10">
+  <div class="col-lg-10 col-sm-10">
     <div class="ism-slider" id="my-slider">
       <ol>
         <li>
@@ -32,7 +32,7 @@
       </ol>
     </div>
   </div>
-  <div class="col-lg-2">
+  <div class="col-lg-2 col-sm-2">
     <div class='row'>
       <p>Active users: <span id='userCount'>{{ active_users }}</span></p>
     </div>
@@ -47,10 +47,10 @@
     <h1>ad space</h1>
   </div>
   <div class="col-lg-10">
-    <div class='row'>
+    <div class='row' id='deal-container'>
       {% for deal in deals %}
 
-      <div class="col-lg-2 small-product-container">
+      <div class="col-lg-2 col-sm-2 small-product-container">
         <img class="img-thumbnail" src="{{deal.imagepath}}" width="100%">
         <h3 class="small-title">{{deal.name}}</h3>
         <p class="price text-muted float-left"><strike> <small>${{ deal.price }}</small> </strike></p>

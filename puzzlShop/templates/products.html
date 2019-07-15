@@ -23,12 +23,12 @@
                 {% endfor %}
                 <label for="amount">Price range:</label>
                 <div class="row price-range">
-                    <div class="col-lg-5">
+                    <div class="col-lg-5 col-sm-5">
                         <input type="text" name='min' id='min-ammount' class='form-cotrol' style="width:100%"
                             placeholder='0' value="{{prices_range[0]}}"/>
                     </div>
                     <h2 class="float-left">-</h2>
-                    <div class="col-lg-5">
+                    <div class="col-lg-5 col-sm-5">
                         <input type="text" name='max' id='max-ammount' class='form-cotrol' style="width:100%"
                             placeholder='1000' value="{{prices_range[1]}}"/>
                     </div>
@@ -38,9 +38,9 @@
 
             </form>
         </div>
-        <div class="col-lg-10">
+        <div class="col-lg-10 col-sm-12">
             <div class="row" id="toolbar">
-                <div class="col-lg-3">
+                <div class="col-lg-3 col-sm-3">
                     <form method='POST' action='/products'>
                         {% for tag in selected_tags %}
                         <input type='hidden' name='tags' value='{{tag}}'>
@@ -65,12 +65,12 @@
                 <div class="col-lg-2 col-sm-2 col-xs-2">
                     <a href="/products/{{product.id}}"><img src="{{ product.imagepath }}" class="img-thumbnail rounded product-image"/></a>
                 </div>
-                <div class="col-lg-10">
+                <div class="col-lg-10 col-sm-10">
                     <div class="row">
-                        <div class="col-lg-10 float-left">
+                        <div class="col-lg-10 col-sm-10 float-left">
                             <a href="/products/{{product.id}}" id="name-heading"><h3 class="product-name">{{ product.name}}</h3></a>
                         </div>
-                        <div class="col-lg-2">
+                        <div class="col-lg-2 col-sm-2">
                             {% set ns = namespace(deal=false) %}
                             {% for deal in deals: %}
                                 {% if product.id == deal.productid %}
@@ -85,11 +85,11 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-lg-10">
+                        <div class="col-lg-10 col-sm-10">
                             <div class="star-ratings-sprite"><span style="width:{{ product.rating / 5 * 100 }}%"
                                     class="star-ratings-sprite-rating"></span></div>
                         </div>
-                        <div class="col-lg-2">
+                        <div class="col-lg-2 col-sm-2">
                             <form action="/cart/add" method='POST'>
                                 <input type="hidden" value='{{product.id}}' name='product'>
                                 <button name='product' type="submit" class="btn btn-secondary btn-lg">Add to
@@ -98,7 +98,7 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-lg-10">
+                        <div class="col-lg-10 col-sm-10">
                             <p class="productDescription">{{ product.description }}</p>
                         </div>
                     </div>
@@ -115,38 +115,6 @@
                             class="page-button btn btn-outline-info float-left">{{ i }}</button>
                     {% endif %}
                 {% endfor %}
-
-                <!--- {% set pages = (products|length / 20)|int %}
-
-                {% if page > 10 %}
-                    <button value=" 1 " name="page" type="submit"
-                        class="page-button btn btn-outline-info float-left"> 1 </button>
-                    <h2 class="float-left text-info"> ... </h2>
-                {% endif %}
-
-                {% for i in range(page - 1, pages) %}
-                    {% if i + 1 == page %}
-                        <button value="{{i+1}}" name="page" type="submit"
-                            class="page-button btn btn-info float-left">{{ i+1 }}</button>
-                    {% else %}
-                        <button value="{{i+1}}" name="page" type="submit"
-                            class="page-button btn btn-outline-info float-left">{{ i+1 }}</button>
-                    {% endif %}
-                    {%- if loop.index % 10 == 0 %}{% break %}{% endif %}
-                {%- endfor %}
-                
-                {% if page < pages - 5 %}
-                <h2 class="float-left text-info"> ... </h2>
-                    {% for i in range(pages - 5, pages) %}
-                        {% if i + 1 == page %}
-                            <button value="{{i+1}}" name="page" type="submit"
-                                class="page-button btn btn-info float-left">{{ i+1 }}</button>
-                        {% else %}
-                            <button value="{{i+1}}" name="page" type="submit"
-                                class="page-button btn btn-outline-info float-left">{{ i+1 }}</button>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}-->
             </form>
         </div>
     </div>
