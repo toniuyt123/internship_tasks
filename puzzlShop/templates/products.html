@@ -77,6 +77,7 @@
                                     <p class="price text-muted"><strike> <small>${{ product.price }}</small> </strike></p>
                                     <p class="price text-danger"> ${{ deal.newprice }}</p>
                                     {% set ns.deal = true %}
+                                    {% break %}
                                 {% endif %}
                             {% endfor %}
                             {% if ns.deal is sameas false %}

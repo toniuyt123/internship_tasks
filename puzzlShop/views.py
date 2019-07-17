@@ -121,36 +121,38 @@ def get_products():
             keys = list(request.form.keys())
             statement = ''
             result = []
+
             if 'search_query' in keys:
                 query = request.form['search_query']
                 result = db.engine.execute('''SELECT * FROM products 
                                 WHERE to_tsvector(name) @@ to_tsquery(%s) OR
                                     to_tsvector(description) @@ to_tsquery(%s)
                                 LIMIT 20''', (query, query))
+            else:
+                if 'page' in keys:
+                    page = int(request.form.get('page'))
+                assert page <= 2000
 
-            if 'page' in keys:
-                page = int(request.form.get('page'))
-            assert page <= 2000
+                tags = [t.name for t in Tag.query.all()]
+                if 'tags' in keys:
+                    tags = request.form.getlist('tags')
+                    selected_tags = request.form.getlist('tags')
+                req_min, req_max = request.form.get('min'), request.form.get('max')
 
-            tags = [t.name for t in Tag.query.all()]
-            if 'tags' in keys:
-                tags = request.form.getlist('tags')
-                selected_tags = request.form.getlist('tags')
-            req_min, req_max = request.form.get('min'), request.form.get('max')
-
-            if req_min != None and req_min != '':
-                min_price = int(req_min)
-            if req_max != None and req_max != '':
-                max_price = int(req_max)
-            statement = ('''SELECT p.*, array_agg(t.name) AS tags FROM products p
-                            LEFT JOIN productstags pt ON pt.productid = p.id
-                            LEFT JOIN tags t ON pt.tagid = t.id
-                            WHERE p.price >= %s AND p.price <= %s
-                            GROUP BY p.id, p.name, p.description, p.price, p.difficulty, p.rating, p.quantity
-                            HAVING \'%s\' = ANY(array_agg(t.name))
-                            ''' % (min_price, max_price, tags[0])) + ''.join((' OR \'%s\' = ANY(array_agg(t.name)) ' % t for t in tags[1:])) + ('''
-                                LIMIT 20 OFFSET %s ''' % (20*(page-1)))
-            result = db.engine.execute(statement)
+                if req_min != None and req_min != '':
+                    min_price = int(req_min)
+                if req_max != None and req_max != '':
+                    max_price = int(req_max)
+                statement = ('''SELECT p.*, array_agg(t.name) AS tags FROM products p
+                                LEFT JOIN productstags pt ON pt.productid = p.id
+                                LEFT JOIN tags t ON pt.tagid = t.id
+                                WHERE p.price >= %s AND p.price <= %s
+                                GROUP BY p.id, p.name, p.description, p.price, p.difficulty, p.rating, p.quantity
+                                HAVING \'%s\' = ANY(array_agg(t.name))
+                                ''' % (min_price, max_price, tags[0])) + ''.join((' OR \'%s\' = ANY(array_agg(t.name)) ' % t for t in tags[1:])) + ('''
+                                    LIMIT 20 OFFSET %s ''' % (20*(page-1)))
+                
+                result = db.engine.execute(statement)
             products = [dict(row.items()) for row in result]
         except AssertionError:
             return redirect('/')
@@ -169,9 +171,9 @@ def get_products():
     tags = db.engine.execute('SELECT * FROM tags')
     
     deals = db.engine.execute('SELECT * FROM deals WHERE startdate <= NOW() AND enddate >= NOW()')
-
+    #print(list(deals))
     return render_template('/products.html', products=products, tags=tags, page=int(page), 
-                        deals=deals, selected_tags=selected_tags, prices_range=(min_price, max_price))
+                        deals=list(deals), selected_tags=selected_tags, prices_range=(min_price, max_price))
 
 
 @app.route('/products/<id>', methods=['GET'])
@@ -220,8 +222,10 @@ def cart():
         cartitems = db.session.query(CartItem, Product).filter(
             CartItem.cartid == cart.id).filter(CartItem.productid == Product.id).all()
 
+        deals = db.engine.execute('SELECT * FROM deals WHERE startdate <= NOW() AND enddate >= NOW()')
+
         return render_template('cart.html', cartitems=cartitems, form=form, key=stripe_keys['publishable_key'],
-                               empty=True if cartitems == [] else False)
+                               empty=True if cartitems == [] else False, deals=list(deals))
 
 
 def get_cart(id):
@@ -250,12 +254,18 @@ def charge():
 
             cart = Cart.query.filter_by(id=cartid).first()
 
-            result = db.engine.execute(""" SELECT p.price, c.quantity FROM cartitems c
+            result = db.engine.execute(""" SELECT p.price, c.quantity, d.newprice FROM cartitems c
                                                 LEFT JOIN products p ON p.id = c.productid
+                                                LEFT JOIN deals d ON d.productid = p.id
                                                 WHERE c.cartid = %s""", (cartid,))
             real_amount = 0
             for row in result:
-                real_amount += int(row[0]*100)*int(row[1])
+                print(row)
+                if row[2] is not None:
+                    real_amount += int(row[2]*100)*int(row[1])
+                else:
+                    real_amount += int(row[0]*100)*int(row[1])
+            print(real_amount)
 
             if amount != real_amount:
                 return redirect(url_for('cart'))
@@ -265,7 +275,7 @@ def charge():
             user = User.query.filter_by(id=cart.userid).first_or_404()
 
             key = hashlib.sha1()
-            key.update(user.email)
+            key.update(user.email.encode('utf-8'))
             
 
             customer = stripe.Customer.create(

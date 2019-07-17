@@ -6,10 +6,14 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin
 from flask_socketio import SocketIO
 from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy.engine import Engine
+from sqlalchemy.event import listens_for
+from sqlalchemy import event
 from datetime import datetime
 import stripe
 import json
 import logging
+import time
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object("puzzlShop.config.BaseConfig")
@@ -116,10 +120,10 @@ class AlchemyEncoder(json.JSONEncoder):
 app.jinja_env.add_extension('jinja2.ext.loopcontrols')
 
 
-@db.event.listens_for(db.engine, "handle_error")
+'''@db.event.listens_for(db.engine, "handle_error")
 def handle_exception(context):
     abort(500)
-
+'''
 
 @app.errorhandler(404)
 def not_found_error(error):
