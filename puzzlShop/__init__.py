@@ -122,8 +122,8 @@ app.jinja_env.add_extension('jinja2.ext.loopcontrols')
 
 '''@db.event.listens_for(db.engine, "handle_error")
 def handle_exception(context):
-    abort(500)
-'''
+    abort(500)'''
+
 
 @app.errorhandler(404)
 def not_found_error(error):

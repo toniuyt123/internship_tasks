@@ -10,15 +10,15 @@ def cezarc(words):
   
   graph = dict().fromkeys(letters)
   for k in graph.keys():
-    graph[k] = set()
+    graph[k] = []
 
   for i in range(len(words) - 1):
     min_len = min( len(words[i]), len(words[i + 1]) )
     for j in range(min_len):
       l1 = words[i][j]
       l2 = words[i + 1][j]
-      if l1 != l2:
-        graph[l1].add(l2)
+      if l1 != l2 and l2 not in graph[l1]:
+        graph[l1].append(l2)
         break
 
   degree = {letter: 0 for letter in letters}
@@ -46,6 +46,7 @@ def cezarc(words):
       return
 
   alphabet = [chr(i) for i in range(ord('a'), ord('z') + 1) if chr(i) not in sort]
+  print('YES')
   print(''.join(sort) + ''.join(alphabet))
 
   return 0
@@ -63,12 +64,3 @@ if __name__ == '__main__':
         cezarc(words)
     except ValueError as e:
         print(e)
-
-'''
-5
-pa
-pc
-mpac
-mama
-maca
-'''
