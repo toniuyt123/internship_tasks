@@ -7,6 +7,7 @@ const port = 3000
 
 const triplets = (a) => {
   const lengths = new Set();
+  lengths.add(0);
 
   for (let x = 1; x <= a; x++) {
     for (let y = x; y <= a; y++) {
@@ -37,7 +38,7 @@ app.post('/', (req, res) => {
 
   sides = triplets(a);
 
-  console.log(Math.max(...sides), sides.size);
+  console.log(Math.max(...sides), sides.size - 1);
 });
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`))
